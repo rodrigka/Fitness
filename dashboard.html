@@ -1312,40 +1312,77 @@ function calculateCalories() {
     `;
   }
 
-  // Explainer box
+  // Daily reminders - dynamic, based on current data
   const expl = document.getElementById('calorieExplainer');
-  const formulaName = usingKatch ? 'Katch-McArdle' : 'Mifflin-St Jeor';
-  const formulaDetail = usingKatch
-    ? `<strong>Katch-McArdle</strong> : BMR = 370 + 21.6 x masse maigre<br>
-       Masse maigre = ${weight} kg x (1 - ${latestFatPct}%) = <strong>${lbm.toFixed(1)} kg</strong>`
-    : `<strong>Mifflin-St Jeor</strong> : BMR = 10 x poids + 6.25 x taille - 5 x age ${sex === 'M' ? '+ 5' : '- 161'}`;
+  const proteinTarget = Math.round(weight * 1.8);
+  const proteinLow = Math.round(weight * 1.6);
+  const proteinHigh = Math.round(weight * 2.0);
 
-  let adaptDetail = '';
-  if (adaptEnabled && adaptReduction > 0) {
-    const kgLost = adaptReduction / (0.01 * (bmr + adaptReduction));
-    adaptDetail = `<br><br><strong>Adaptation metabolique</strong> : tu as perdu ~${kgLost.toFixed(1)} kg depuis ta premiere mesure.
-    Ton metabolisme s'est adapte, retirant environ <strong>${Math.round(adaptReduction)} kcal/jour</strong> de ton BMR theorique.
-    C'est une des raisons pour lesquelles tu peux avoir l'impression de ne pas perdre malgre un apport faible.`;
+  // Build dynamic reminders based on current situation
+  const reminders = [];
+
+  // 1. Calorie context
+  reminders.push({
+    title: 'Ton objectif du jour',
+    text: `<strong>${safeTarget} kcal</strong> et <strong>${proteinLow}-${proteinHigh}g de proteines</strong> (~${Math.ceil(proteinTarget / 13)} oeufs en equivalent). Les proteines brulent ~25% de leurs calories rien qu'a la digestion.`
+  });
+
+  // 2. Metabolic adaptation reminder (if active and significant)
+  if (adaptEnabled && adaptReduction > 10) {
+    reminders.push({
+      title: 'Adaptation metabolique',
+      text: `Ton corps depense <strong>~${Math.round(adaptReduction)} kcal/jour de moins</strong> que ce que les formules standard predisent. C'est normal apres une perte prolongee. Patience, ne descends pas trop bas en calories.`
+    });
   }
 
-  expl.innerHTML = `
-    <strong>Formule utilisee : ${formulaName}</strong><br>
-    ${formulaDetail}<br><br>
-    <strong>Calcul</strong> : BMR${adaptEnabled ? ' (apres adaptation)' : ''} ${Math.round(bmr)} x ${neatMult} (NEAT) + ${sportCal} (sport) = <strong>${Math.round(tdee)} kcal TDEE</strong><br>
-    Ajustement objectif : ${Math.round(dailyAdjustment)} kcal/jour → <strong>${safeTarget} kcal/jour</strong>
-    ${adaptDetail}
-    <br><br>
-    <strong>Pourquoi tu peux grossir meme sous 1400 kcal :</strong><br>
-    1. <strong>Retention d'eau</strong> : sel, stress (cortisol), cycle hormonal → +0.5 a 2 kg temporaires<br>
-    2. <strong>Recomposition</strong> : tu gagnes du muscle (62% → 68%) qui est plus dense que la graisse<br>
-    3. <strong>Glycogene</strong> : 1g stocke = 3g d'eau retenue<br>
-    4. <strong>Adaptation metabolique</strong> : ton corps economise l'energie apres une longue perte<br>
-    5. <strong>Pesee non a jeun</strong> : le contenu digestif pese 0.5-1.5 kg<br>
-    6. <strong>Creatine</strong> : la supplementation en creatine (depuis mars) provoque une retention de 1-2 kg d'eau intramusculaire. C'est positif (meilleure performance, muscles plus pleins), mais ca masque la perte de gras reelle sur la balance.
-    <br><br>
-    <strong>Objectif proteines :</strong> ${Math.round(weight * 1.6)}-${Math.round(weight * 2.0)}g/jour (1.6-2.0 g/kg).
-    Les proteines ont le TEF le plus eleve (~25% brulees a la digestion), preservent le muscle en deficit, et augmentent la satiete.
-  `;
+  // 3. Creatine reminder
+  reminders.push({
+    title: 'Creatine & balance',
+    text: `La creatine retient <strong>1-2 kg d'eau dans les muscles</strong>. Si la balance stagne ou monte legerement, regarde ta courbe de graisse % plutot que le poids brut.`
+  });
+
+  // 4. Weight stall context
+  const sorted = rawData.measurements.filter(m => m.weight).sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (sorted.length >= 7) {
+    const last7 = sorted.slice(0, 7);
+    const avg7 = last7.reduce((s, m) => s + m.weight, 0) / last7.length;
+    const diff7 = Math.abs(avg7 - weight);
+    if (diff7 < 0.4) {
+      reminders.push({
+        title: 'Plateau detecte',
+        text: `Ton poids varie de moins de 400g sur les 7 derniers jours. C'est souvent de la <strong>retention d'eau</strong> (sel, stress, cycle hormonal, creatine) ou de la <strong>recomposition</strong> (graisse remplacee par du muscle a poids egal). Fais confiance au processus.`
+      });
+    }
+  }
+
+  // 5. Rotating daily tips
+  const dailyTips = [
+    `<strong>Pesee fiable</strong> : pese-toi le matin, a jeun, apres les toilettes. Le poids varie de 0.5-1.5 kg dans la journee.`,
+    `<strong>Deficit cyclique</strong> : alterne jours a ~${safeTarget} kcal (deficit) et jours a ~${Math.round(tdee)} kcal (maintenance) pour relancer le metabolisme.`,
+    `<strong>Le muscle brule</strong> : chaque kg de muscle consomme ~13 kcal/jour au repos. Plus tu en as, plus ton metabolisme de base remonte.`,
+    `<strong>Sommeil & cortisol</strong> : moins de 7h de sommeil augmente le cortisol, qui favorise la retention d'eau et le stockage de graisse. Le repos fait partie du programme.`,
+    `<strong>Glycogene</strong> : un repas plus riche en glucides peut ajouter 0.5-1 kg sur la balance le lendemain (1g de glycogene = 3g d'eau). Ce n'est pas du gras.`,
+    `<strong>Proteines d'abord</strong> : commence chaque repas par les proteines. Elles rassasient plus et preservent le muscle en deficit calorique.`,
+    `<strong>Surcharge progressive</strong> : en muscu, augmente les charges regulierement. C'est le signal qui force le corps a construire du muscle, meme en deficit.`,
+    `<strong>Patience</strong> : une perte de graisse saine = 0.5-1% du poids par semaine max. Plus rapide = risque de perdre du muscle.`,
+    `<strong>Eau</strong> : boire 2L/jour aide a reduire la retention d'eau (paradoxalement). La deshydratation pousse le corps a stocker.`,
+    `<strong>Non, tu ne "grossis" pas</strong> : si ta graisse % baisse et ton muscle % monte, tu progresses meme si la balance ne bouge pas. Le miroir et les mensurations ne mentent pas.`,
+  ];
+  const dayOfYear = Math.floor((Date.now() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const tipIndex = dayOfYear % dailyTips.length;
+
+  reminders.push({
+    title: 'Rappel du jour',
+    text: dailyTips[tipIndex]
+  });
+
+  // Render
+  expl.innerHTML = reminders.map(r => `
+    <div style="margin-bottom:12px;">
+      <strong style="color:var(--accent);">${r.title}</strong><br>
+      ${r.text}
+    </div>
+  `).join('').trim();
 }
 
 // Init
