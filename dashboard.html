@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Fitness Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --card: #1a1d27;
+    --border: #2a2d3a;
+    --text: #e4e4e7;
+    --muted: #9ca3af;
+    --accent: #818cf8;
+    --accent2: #34d399;
+    --accent3: #f472b6;
+    --accent4: #60a5fa;
+    --danger: #f87171;
+    --warning: #fbbf24;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 20px;
+    padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  }
+  h1 { font-size: 1.6rem; font-weight: 700; }
+  h2 { font-size: 1.1rem; font-weight: 600; color: var(--muted); margin-bottom: 12px; }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .header-left { display: flex; align-items: center; gap: 16px; }
+  .status {
+    font-size: 0.8rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    background: #1e3a2f;
+    color: var(--accent2);
+  }
+  .status.error { background: #3a1e1e; color: var(--danger); }
+
+  .btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn:hover { transform: translateY(-1px); filter: brightness(1.1); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--accent); }
+  .btn-sm { padding: 6px 14px; font-size: 0.8rem; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+  }
+  .metric-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  .metric-value { font-size: 1.8rem; font-weight: 700; }
+  .metric-unit { font-size: 0.9rem; color: var(--muted); font-weight: 400; }
+  .metric-change { font-size: 0.8rem; margin-top: 4px; }
+  .metric-change.positive { color: var(--accent2); }
+  .metric-change.negative { color: var(--danger); }
+  .metric-change.neutral { color: var(--muted); }
+
+  .charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .chart-card { min-height: 300px; }
+  .chart-card canvas { max-height: 260px; }
+
+  .goal-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .input-group { margin-bottom: 16px; }
+  .input-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .input-row { display: flex; gap: 8px; align-items: center; }
+  input[type="number"], input[type="date"], input[type="text"], select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 0.95rem;
+    width: 100%;
+    outline: none;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  .unit-label { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+
+  .calorie-result {
+    background: linear-gradient(135deg, #1e1b4b, #1e3a5f);
+    border: 1px solid #3730a3;
+    border-radius: 14px;
+    padding: 24px;
+    text-align: center;
+  }
+  .calorie-number {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent4));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .calorie-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+    text-align: center;
+  }
+  .calorie-breakdown .item { font-size: 0.8rem; color: var(--muted); }
+  .calorie-breakdown .item span { display: block; font-size: 1.1rem; color: var(--text); font-weight: 600; }
+
+  .formula-compare {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 16px;
+    text-align: center;
+  }
+  .formula-box {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+    padding: 12px;
+  }
+  .formula-box .name { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+  .formula-box .val { font-size: 1.3rem; font-weight: 700; }
+  .formula-box.active { border: 1px solid var(--accent); }
+  .formula-box.secondary { opacity: 0.7; }
+
+  .full-width { grid-column: 1 / -1; }
+
+  .radio-group { display: flex; gap: 8px; flex-wrap: wrap; }
+  .radio-group label {
+    padding: 8px 16px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .radio-group input { display: none; }
+  .radio-group input:checked + label {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(129, 140, 248, 0.1);
+  }
+
+  /* Table with filters */
+  .table-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  .table-filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .table-filters input, .table-filters select {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 0.8rem;
+  }
+  .table-container { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  th {
+    text-align: left;
+    padding: 10px 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+  }
+  th:hover { color: var(--accent); }
+  th .sort-arrow { font-size: 0.7rem; margin-left: 4px; }
+  td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+  }
+  .pagination button {
+    padding: 6px 12px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 0.8rem;
+  }
+  .pagination button:hover { border-color: var(--accent); }
+  .pagination button:disabled { opacity: 0.3; cursor: default; }
+  .pagination .page-info { font-size: 0.8rem; color: var(--muted); }
+  .row-count { font-size: 0.8rem; color: var(--muted); }
+
+  .tooltip-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+    color: var(--muted);
+    font-size: 0.65rem;
+    text-align: center;
+    line-height: 16px;
+    cursor: help;
+    margin-left: 4px;
+    position: relative;
+  }
+  .tooltip-icon:hover::after {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: 120%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #2a2d3a;
+    color: var(--text);
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    white-space: pre-line;
+    width: 260px;
+    z-index: 10;
+    line-height: 1.4;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+  }
+
+  .info-box {
+    background: rgba(96,165,250,0.08);
+    border: 1px solid rgba(96,165,250,0.2);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-top: 14px;
+    font-size: 0.8rem;
+    color: var(--muted);
+    line-height: 1.5;
+    text-align: left;
+  }
+  .info-box strong { color: var(--text); }
+
+  @media (max-width: 900px) {
+    .charts-grid, .goal-section { grid-template-columns: 1fr; }
+    .grid { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  /* iPhone 15 and similar (< 430px) */
+  @media (max-width: 430px) {
+    body { padding: 10px; }
+    h1 { font-size: 1.2rem; }
+    h2 { font-size: 0.95rem; margin-bottom: 8px; }
+
+    .header { flex-direction: column; align-items: flex-start; gap: 8px; }
+
+    .grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .grid .card { padding: 12px; }
+    .metric-value { font-size: 1.3rem; }
+    .metric-unit { font-size: 0.7rem; }
+    .metric-label { font-size: 0.7rem; }
+    .metric-change { font-size: 0.65rem; }
+
+    /* Charts: force single column, constrain width */
+    .charts-grid { grid-template-columns: 1fr; gap: 12px; }
+    .chart-card {
+      min-height: 0 !important;
+      padding: 14px;
+      overflow: hidden;
+    }
+    .chart-card canvas {
+      max-height: 200px !important;
+      width: 100% !important;
+      height: auto !important;
+    }
+
+    .goal-section { grid-template-columns: 1fr; gap: 12px; }
+
+    .calorie-number { font-size: 2.2rem; }
+    .calorie-breakdown { grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+    .calorie-breakdown .item { font-size: 0.65rem; }
+    .calorie-breakdown .item span { font-size: 0.9rem; }
+
+    .formula-compare { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .formula-box { padding: 8px; }
+    .formula-box .name { font-size: 0.6rem; }
+    .formula-box .val { font-size: 1rem; }
+
+    .input-group { margin-bottom: 10px; }
+    input[type="number"], input[type="date"], input[type="text"], select {
+      padding: 8px 10px;
+      font-size: 0.85rem;
+    }
+    .radio-group label { padding: 6px 12px; font-size: 0.8rem; }
+
+    /* Table: hide secondary columns on mobile */
+    .table-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+    .table-filters { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .table-filters span { display: none; }
+    .table-filters input, .table-filters select { width: 100%; min-width: 0; }
+    .table-container { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    table { font-size: 0.7rem; min-width: 600px; }
+    th, td { padding: 7px 5px; white-space: nowrap; }
+
+    .info-box { font-size: 0.72rem; padding: 12px; }
+
+    .btn { padding: 8px 16px; font-size: 0.8rem; }
+    .btn-sm { padding: 5px 10px; font-size: 0.7rem; }
+
+    .pagination button { padding: 5px 10px; font-size: 0.7rem; }
+    .pagination .page-info { font-size: 0.7rem; }
+  }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Fitness Dashboard</h1>
+    <span class="status" id="status">Aucune donnee chargee</span>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-primary" id="loadBtn" onclick="loadLatestFile()">
+      Charger les donnees
+    </button>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="grid" id="kpiGrid">
+  <div class="card">
+    <div class="metric-label">Poids actuel</div>
+    <div class="metric-value" id="currentWeight">--<span class="metric-unit"> kg</span></div>
+    <div class="metric-change neutral" id="weightChange">--</div>
+  </div>
+  <div class="card">
+    <div class="metric-label">Masse grasse</div>
+    <div class="metric-value" id="currentFat">--<span class="metric-unit"> %</span></div>
+    <div class="metric-change neutral" id="fatChange">--</div>
+  </div>
+  <div class="card">
+    <div class="metric-label">Masse musculaire</div>
+    <div class="metric-value" id="currentMuscle">--<span class="metric-unit"> %</span></div>
+    <div class="metric-change neutral" id="muscleChange">--</div>
+  </div>
+  <div class="card">
+    <div class="metric-label">Hydratation</div>
+    <div class="metric-value" id="currentWater">--<span class="metric-unit"> %</span></div>
+    <div class="metric-change neutral" id="waterChange">--</div>
+  </div>
+  <div class="card">
+    <div class="metric-label">IMC</div>
+    <div class="metric-value" id="currentBMI">--</div>
+    <div class="metric-change neutral" id="bmiCategory">--</div>
+  </div>
+  <div class="card">
+    <div class="metric-label">Perte totale</div>
+    <div class="metric-value" id="totalLoss">--<span class="metric-unit"> kg</span></div>
+    <div class="metric-change neutral" id="totalLossPeriod">--</div>
+  </div>
+  <div class="card">
+    <div class="metric-label">Masse maigre</div>
+    <div class="metric-value" id="currentLBM">--<span class="metric-unit"> kg</span></div>
+    <div class="metric-change neutral" id="lbmChange">--</div>
+  </div>
+  <div class="card" style="border-color: rgba(251,191,36,0.3); background: linear-gradient(135deg, var(--card), rgba(251,191,36,0.05));">
+    <div class="metric-label">Proteines / jour (objectif)</div>
+    <div class="metric-value" id="proteinTarget">--<span class="metric-unit"> g</span></div>
+    <div class="metric-change neutral" id="proteinRange">--</div>
+    <div class="metric-change neutral" id="proteinEggs" style="margin-top:2px;"></div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="charts-grid">
+  <div class="card chart-card">
+    <h2>Evolution du poids</h2>
+    <canvas id="weightChart"></canvas>
+  </div>
+  <div class="card chart-card">
+    <h2>Composition corporelle</h2>
+    <canvas id="bodyCompChart"></canvas>
+  </div>
+  <div class="card chart-card">
+    <h2>Masse grasse vs Musculaire</h2>
+    <canvas id="fatMuscleChart"></canvas>
+  </div>
+  <div class="card chart-card">
+    <h2>Hydratation</h2>
+    <canvas id="waterChart"></canvas>
+  </div>
+</div>
+
+<!-- Goal & Calorie Calculator -->
+<div class="goal-section">
+  <div class="card">
+    <h2>Parametres & Objectif</h2>
+
+    <div class="input-group">
+      <label>Taille (cm)</label>
+      <input type="number" id="heightInput" value="162" min="100" max="250" onchange="recalculate()">
+    </div>
+
+    <div class="input-group">
+      <label>Age</label>
+      <input type="number" id="ageInput" value="25" min="10" max="100" onchange="recalculate()">
+    </div>
+
+    <div class="input-group">
+      <label>Sexe</label>
+      <div class="radio-group">
+        <input type="radio" name="sex" id="sexF" value="F" checked onchange="recalculate()">
+        <label for="sexF">Femme</label>
+        <input type="radio" name="sex" id="sexM" value="M" onchange="recalculate()">
+        <label for="sexM">Homme</label>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Niveau d'activite quotidienne (hors sport)</label>
+      <select id="neatLevel" onchange="recalculate()">
+        <option value="1.2">Sedentaire (bureau, peu de marche)</option>
+        <option value="1.3">Legerement actif (marche 30min/jour)</option>
+        <option value="1.4">Moderement actif (debout/marche 2h+)</option>
+        <option value="1.5">Actif (travail physique leger)</option>
+        <option value="1.6">Tres actif (travail physique intense)</option>
+      </select>
+    </div>
+
+    <div class="input-group">
+      <label>Depense sport quotidienne</label>
+      <div class="input-row">
+        <input type="number" id="sportCalories" value="100" min="0" max="2000" step="10" onchange="recalculate()">
+        <span class="unit-label">kcal / jour</span>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Objectif hebdomadaire</label>
+      <div class="input-row">
+        <select id="goalDirection" onchange="recalculate()">
+          <option value="lose">Perdre</option>
+          <option value="gain">Prendre</option>
+          <option value="maintain">Maintenir</option>
+        </select>
+        <input type="number" id="goalAmount" value="200" min="0" max="2000" step="50" onchange="recalculate()">
+        <span class="unit-label">g / semaine</span>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>
+        Adaptation metabolique
+        <span class="tooltip-icon" data-tip="Quand tu perds du poids sur une longue periode, ton metabolisme ralentit au-dela de ce que la perte de poids explique. C'est l'adaptation metabolique (ou thermogenese adaptative). On estime -1% de BMR par kg perdu.">?</span>
+      </label>
+      <div class="radio-group">
+        <input type="radio" name="adaptation" id="adaptOn" value="on" checked onchange="recalculate()">
+        <label for="adaptOn">Active</label>
+        <input type="radio" name="adaptation" id="adaptOff" value="off" onchange="recalculate()">
+        <label for="adaptOff">Desactivee</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="card calorie-result">
+    <h2 style="color:var(--text);">Calories quotidiennes recommandees</h2>
+    <div class="calorie-number" id="dailyCalories">--</div>
+    <div style="color:var(--muted);font-size:0.9rem;margin-top:4px;">kcal / jour</div>
+
+    <!-- Formula comparison -->
+    <div class="formula-compare">
+      <div class="formula-box active" id="katchBox">
+        <div class="name">Katch-McArdle (masse maigre)</div>
+        <div class="val" id="katchBMR">--</div>
+      </div>
+      <div class="formula-box secondary" id="mifflinBox">
+        <div class="name">Mifflin-St Jeor (classique)</div>
+        <div class="val" id="mifflinBMR">--</div>
+      </div>
+    </div>
+
+    <div class="calorie-breakdown" style="margin-top:16px;">
+      <div class="item">
+        <span id="bmrValue">--</span>
+        BMR retenu
+      </div>
+      <div class="item">
+        <span id="tdeeValue">--</span>
+        TDEE total
+      </div>
+      <div class="item">
+        <span id="deficitValue">--</span>
+        Deficit/Surplus
+      </div>
+    </div>
+
+    <div class="calorie-breakdown" style="margin-top:8px;">
+      <div class="item">
+        <span id="adaptValue">--</span>
+        Adapt. metab.
+      </div>
+      <div class="item">
+        <span id="tefValue">--</span>
+        TEF (~10%)
+      </div>
+      <div class="item">
+        <span id="neatValue">--</span>
+        NEAT mult.
+      </div>
+    </div>
+
+    <div style="margin-top:20px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.1);">
+      <div class="calorie-breakdown">
+        <div class="item">
+          <span id="proteinValue">--</span>
+          Proteines (g)
+        </div>
+        <div class="item">
+          <span id="carbValue">--</span>
+          Glucides (g)
+        </div>
+        <div class="item">
+          <span id="fatMacroValue">--</span>
+          Lipides (g)
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;font-size:0.8rem;color:var(--muted);text-align:left;">
+      <div id="goalProjection"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Explainer full-width -->
+<div class="card info-box" id="calorieExplainer" style="margin-bottom:24px;"></div>
+
+<!-- Full History Table -->
+<div class="card" style="margin-bottom:24px;">
+  <div class="table-header">
+    <h2 style="margin-bottom:0;">Historique complet</h2>
+    <div class="table-filters">
+      <input type="date" id="filterDateFrom" onchange="applyFilters()" title="Date debut">
+      <span style="color:var(--muted);font-size:0.8rem;">a</span>
+      <input type="date" id="filterDateTo" onchange="applyFilters()" title="Date fin">
+      <select id="filterMetric" onchange="applyFilters()">
+        <option value="all">Toutes les mesures</option>
+        <option value="complete">Composition complete</option>
+        <option value="weight-only">Poids uniquement</option>
+      </select>
+      <select id="rowsPerPage" onchange="applyFilters()">
+        <option value="20">20 lignes</option>
+        <option value="50">50 lignes</option>
+        <option value="100">100 lignes</option>
+        <option value="all">Tout afficher</option>
+      </select>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">Exporter CSV</button>
+    </div>
+  </div>
+  <div class="row-count" id="rowCount"></div>
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th onclick="sortTable('date')">Date <span class="sort-arrow" id="sort-date"></span></th>
+          <th onclick="sortTable('weight')">Poids <span class="sort-arrow" id="sort-weight"></span></th>
+          <th onclick="sortTable('fat')">Graisse % <span class="sort-arrow" id="sort-fat"></span></th>
+          <th onclick="sortTable('muscle')">Muscle % <span class="sort-arrow" id="sort-muscle"></span></th>
+          <th onclick="sortTable('bone')">Os % <span class="sort-arrow" id="sort-bone"></span></th>
+          <th onclick="sortTable('water')">Eau % <span class="sort-arrow" id="sort-water"></span></th>
+          <th onclick="sortTable('fatKg')">Graisse kg <span class="sort-arrow" id="sort-fatKg"></span></th>
+          <th onclick="sortTable('muscleKg')">Muscle kg <span class="sort-arrow" id="sort-muscleKg"></span></th>
+          <th onclick="sortTable('lbm')">Masse maigre <span class="sort-arrow" id="sort-lbm"></span></th>
+        </tr>
+      </thead>
+      <tbody id="historyTable"></tbody>
+    </table>
+  </div>
+  <div class="pagination" id="pagination"></div>
+</div>
+
+<script>
+let rawData = null;
+let charts = {};
+let allEntries = [];
+let filteredEntries = [];
+let currentSort = { col: 'date', asc: false };
+let currentPage = 1;
+
+// Embedded fitness data
+const EMBEDDED_DATA = {"measurements":[{"date":"2026-04-09T11:03:55.994Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":59.1,"calories":null,"height":162},{"date":"2026-04-09T11:01:49.732Z","fat":28,"muscle":68,"bone":4,"water":50.3,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-09T11:01:09.951Z","fat":28,"muscle":68,"bone":4,"water":50.2,"weight":59.2,"calories":null,"height":null},{"date":"2026-04-09T11:00:30.327Z","fat":28,"muscle":68,"bone":4,"water":50.3,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-08T10:57:37.002Z","fat":28,"muscle":68,"bone":4,"water":50.1,"weight":59.3,"calories":null,"height":null},{"date":"2026-04-07T11:01:15.329Z","fat":29,"muscle":68,"bone":4,"water":50,"weight":59.6,"calories":null,"height":null},{"date":"2026-04-07T11:00:42.143Z","fat":29,"muscle":68,"bone":4,"water":50.1,"weight":59.5,"calories":null,"height":null},{"date":"2026-04-03T11:03:00.180Z","fat":29,"muscle":68,"bone":4,"water":49.8,"weight":59.2,"calories":null,"height":null},{"date":"2026-04-02T10:56:31.539Z","fat":29,"muscle":67,"bone":4,"water":49.4,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-02T10:55:58.089Z","fat":29,"muscle":67,"bone":4,"water":49.2,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-01T11:10:47.288Z","fat":29,"muscle":67,"bone":4,"water":49.6,"weight":59.9,"calories":null,"height":null},{"date":"2026-04-01T11:10:04.419Z","fat":29,"muscle":67,"bone":4,"water":49.5,"weight":60,"calories":null,"height":null},{"date":"2026-03-31T18:12:40.428Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":59.1,"calories":null,"height":160},{"date":"2026-03-31T18:12:33.817Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":59.1,"calories":null,"height":158},{"date":"2026-03-30T11:10:37.565Z","fat":31,"muscle":65,"bone":4,"water":48.2,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-30T11:09:49.511Z","fat":31,"muscle":65,"bone":4,"water":48.1,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-30T11:09:08.765Z","fat":33,"muscle":64,"bone":3,"water":47.2,"weight":59.3,"calories":null,"height":null},{"date":"2026-03-29T12:14:09.827Z","fat":32,"muscle":65,"bone":4,"water":47.8,"weight":59.8,"calories":null,"height":null},{"date":"2026-03-28T11:03:53.471Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":59.4,"calories":null,"height":null},{"date":"2026-03-27T12:45:56.422Z","fat":34,"muscle":63,"bone":3,"water":46.5,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-14T13:58:34.346Z","fat":31,"muscle":66,"bone":4,"water":48.5,"weight":59.2,"calories":null,"height":null},{"date":"2026-03-13T12:36:52.275Z","fat":31,"muscle":66,"bone":4,"water":48.5,"weight":59,"calories":null,"height":null},{"date":"2026-03-13T12:36:08.951Z","fat":31,"muscle":66,"bone":4,"water":48.6,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-12T12:27:05.984Z","fat":31,"muscle":66,"bone":4,"water":48.6,"weight":59.5,"calories":null,"height":null},{"date":"2026-03-11T12:11:41.610Z","fat":30,"muscle":66,"bone":4,"water":48.7,"weight":59.5,"calories":null,"height":null},{"date":"2026-03-10T12:45:44.843Z","fat":30,"muscle":66,"bone":4,"water":49.1,"weight":59.7,"calories":null,"height":null},{"date":"2026-03-09T12:26:37.204Z","fat":30,"muscle":67,"bone":4,"water":49.1,"weight":59.5,"calories":null,"height":null},{"date":"2026-03-08T13:04:26.589Z","fat":32,"muscle":65,"bone":4,"water":47.8,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-06T12:24:26.737Z","fat":30,"muscle":66,"bone":4,"water":48.7,"weight":59.4,"calories":null,"height":null},{"date":"2026-03-04T13:08:28.787Z","fat":31,"muscle":66,"bone":4,"water":48.3,"weight":59.2,"calories":null,"height":null},{"date":"2026-03-04T13:07:41.722Z","fat":31,"muscle":66,"bone":4,"water":48.4,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-02T12:01:59.575Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-02T12:00:53.737Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-01T13:02:36.425Z","fat":32,"muscle":65,"bone":3,"water":47.6,"weight":60.1,"calories":null,"height":null},{"date":"2026-02-28T14:24:24.254Z","fat":32,"muscle":65,"bone":3,"water":47.8,"weight":60.4,"calories":null,"height":null},{"date":"2026-02-26T12:14:56.008Z","fat":31,"muscle":65,"bone":3,"water":48.1,"weight":60.1,"calories":null,"height":null},{"date":"2026-02-25T12:14:52.202Z","fat":31,"muscle":65,"bone":3,"water":48,"weight":60.4,"calories":null,"height":null},{"date":"2026-02-23T11:55:42.936Z","fat":32,"muscle":64,"bone":3,"water":47.6,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-22T12:21:01.358Z","fat":32,"muscle":65,"bone":3,"water":47.7,"weight":61.6,"calories":null,"height":null},{"date":"2026-02-21T14:37:25.539Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":61.3,"calories":null,"height":null},{"date":"2026-02-19T12:14:30.721Z","fat":31,"muscle":65,"bone":3,"water":48.1,"weight":60.9,"calories":null,"height":null},{"date":"2026-02-17T12:10:56.000Z","fat":31,"muscle":65,"bone":3,"water":48.3,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-16T12:08:09.839Z","fat":31,"muscle":65,"bone":3,"water":48.1,"weight":60.7,"calories":null,"height":null},{"date":"2026-02-15T13:50:17.781Z","fat":29,"muscle":68,"bone":4,"water":50.1,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-15T13:48:17.274Z","fat":20,"muscle":76,"bone":4,"water":55.9,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-08T15:12:07.043Z","fat":32,"muscle":65,"bone":3,"water":47.9,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-07T12:51:01.657Z","fat":32,"muscle":64,"bone":3,"water":47.5,"weight":60.6,"calories":null,"height":null},{"date":"2026-02-01T15:37:59.914Z","fat":32,"muscle":64,"bone":3,"water":47.4,"weight":60.5,"calories":null,"height":null},{"date":"2026-01-18T13:05:37.144Z","fat":33,"muscle":63,"bone":3,"water":46.9,"weight":61.8,"calories":null,"height":null},{"date":"2026-01-17T13:39:02.695Z","fat":33,"muscle":64,"bone":3,"water":47.2,"weight":61.8,"calories":null,"height":null},{"date":"2025-12-21T16:35:32.091Z","fat":31,"muscle":65,"bone":4,"water":48.1,"weight":61.7,"calories":null,"height":null},{"date":"2025-12-13T13:56:20.348Z","fat":33,"muscle":64,"bone":3,"water":47.2,"weight":62.1,"calories":null,"height":null},{"date":"2025-12-05T16:12:25.676Z","fat":32,"muscle":64,"bone":3,"water":47.7,"weight":62,"calories":null,"height":null},{"date":"2025-12-02T14:14:39.937Z","fat":33,"muscle":64,"bone":3,"water":47.3,"weight":62.4,"calories":null,"height":null},{"date":"2025-12-01T14:11:10.164Z","fat":33,"muscle":64,"bone":3,"water":47,"weight":62.5,"calories":null,"height":null},{"date":"2025-11-29T16:01:39.684Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":62.4,"calories":null,"height":null},{"date":"2025-11-25T15:35:57.457Z","fat":32,"muscle":64,"bone":4,"water":47.8,"weight":62.7,"calories":null,"height":null},{"date":"2025-11-09T15:56:46.617Z","fat":33,"muscle":64,"bone":3,"water":47.5,"weight":63,"calories":null,"height":null},{"date":"2025-10-30T14:54:51.879Z","fat":33,"muscle":63,"bone":3,"water":46.9,"weight":63.6,"calories":null,"height":null},{"date":"2025-10-28T11:07:23.368Z","fat":33,"muscle":63,"bone":3,"water":46.9,"weight":63.7,"calories":null,"height":null},{"date":"2025-10-26T13:59:14.589Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":64,"calories":null,"height":null},{"date":"2025-10-25T14:04:14.806Z","fat":34,"muscle":63,"bone":3,"water":46.8,"weight":64.5,"calories":null,"height":null},{"date":"2025-10-24T14:14:45.787Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":64.2,"calories":null,"height":null},{"date":"2025-10-22T09:45:14.729Z","fat":34,"muscle":62,"bone":3,"water":46.4,"weight":63.8,"calories":null,"height":null},{"date":"2025-10-18T16:21:37.703Z","fat":34,"muscle":63,"bone":3,"water":46.5,"weight":63.7,"calories":null,"height":null},{"date":"2025-10-12T13:09:18.696Z","fat":34,"muscle":63,"bone":3,"water":46.8,"weight":64.5,"calories":null,"height":null},{"date":"2025-10-10T13:33:03.180Z","fat":35,"muscle":62,"bone":3,"water":46,"weight":64.5,"calories":null,"height":null},{"date":"2025-09-29T16:49:54.675Z","fat":33,"muscle":63,"bone":3,"water":47.1,"weight":64.3,"calories":null,"height":null},{"date":"2025-09-27T09:08:31.988Z","fat":35,"muscle":62,"bone":3,"water":46,"weight":65.5,"calories":null,"height":null},{"date":"2025-09-24T15:09:09.793Z","fat":34,"muscle":63,"bone":3,"water":46.6,"weight":65.6,"calories":null,"height":null},{"date":"2025-09-22T16:17:41.206Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":65.5,"calories":null,"height":null},{"date":"2025-09-14T15:06:26.981Z","fat":35,"muscle":62,"bone":3,"water":46.1,"weight":66.1,"calories":null,"height":null},{"date":"2025-09-09T15:21:43.483Z","fat":33,"muscle":64,"bone":3,"water":47.7,"weight":66,"calories":null,"height":null},{"date":"2025-09-09T15:19:13.869Z","fat":33,"muscle":64,"bone":3,"water":47.7,"weight":66.1,"calories":null,"height":null},{"date":"2025-08-20T06:37:10.057Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":64,"calories":null,"height":158}]};
+
+// Save/load settings from localStorage
+function loadSettings() {
+  const s = JSON.parse(localStorage.getItem('fitnessDashboardSettings2') || '{}');
+  if (s.height) document.getElementById('heightInput').value = s.height;
+  if (s.age) document.getElementById('ageInput').value = s.age;
+  if (s.sex) document.querySelector(`input[name="sex"][value="${s.sex}"]`).checked = true;
+  if (s.neatLevel) document.getElementById('neatLevel').value = s.neatLevel;
+  if (s.sportCalories) document.getElementById('sportCalories').value = s.sportCalories;
+  if (s.goalDirection) document.getElementById('goalDirection').value = s.goalDirection;
+  if (s.goalAmount) document.getElementById('goalAmount').value = s.goalAmount;
+  if (s.adaptation) document.querySelector(`input[name="adaptation"][value="${s.adaptation}"]`).checked = true;
+}
+
+function saveSettings() {
+  localStorage.setItem('fitnessDashboardSettings2', JSON.stringify({
+    height: document.getElementById('heightInput').value,
+    age: document.getElementById('ageInput').value,
+    sex: document.querySelector('input[name="sex"]:checked').value,
+    neatLevel: document.getElementById('neatLevel').value,
+    sportCalories: document.getElementById('sportCalories').value,
+    goalDirection: document.getElementById('goalDirection').value,
+    goalAmount: document.getElementById('goalAmount').value,
+    adaptation: document.querySelector('input[name="adaptation"]:checked').value,
+  }));
+}
+
+function recalculate() {
+  saveSettings();
+  if (!rawData) return;
+  calculateCalories();
+}
+
+// Load latest file via File System Access API or file input fallback
+async function loadLatestFile() {
+  const btn = document.getElementById('loadBtn');
+  btn.innerHTML = '<span class="spinner"></span>Chargement...';
+  btn.disabled = true;
+
+  try {
+    if ('showDirectoryPicker' in window) {
+      const dirHandle = await window.showDirectoryPicker({ startIn: 'documents' });
+      let latestFile = null;
+      let latestTime = 0;
+
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file' && entry.name.endsWith('.json')) {
+          const file = await entry.getFile();
+          if (file.lastModified > latestTime) {
+            latestTime = file.lastModified;
+            latestFile = file;
+          }
+        }
+      }
+
+      if (!latestFile) throw new Error('Aucun fichier JSON trouve');
+
+      const text = await latestFile.text();
+      rawData = JSON.parse(text);
+      processData();
+      setStatus(`Charge: ${latestFile.name}`, false);
+    } else {
+      loadViaFileInput();
+    }
+  } catch (e) {
+    if (e.name === 'AbortError') {
+      setStatus('Chargement annule', true);
+    } else {
+      console.error(e);
+      setStatus('Erreur: ' + e.message, true);
+      loadViaFileInput();
+    }
+  } finally {
+    btn.innerHTML = 'Charger les donnees';
+    btn.disabled = false;
+  }
+}
+
+function loadViaFileInput() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.json';
+  input.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      rawData = JSON.parse(text);
+      processData();
+      setStatus(`Charge: ${file.name}`, false);
+    } catch (err) {
+      setStatus('Erreur de lecture: ' + err.message, true);
+    }
+  };
+  input.click();
+}
+
+function setStatus(text, isError) {
+  const el = document.getElementById('status');
+  el.textContent = text;
+  el.className = isError ? 'status error' : 'status';
+}
+
+function processData() {
+  if (!rawData || !rawData.measurements) return;
+
+  // Deduplicate: keep one entry per day (the one with most data)
+  const byDay = {};
+  rawData.measurements.forEach(m => {
+    const day = m.date.substring(0, 10);
+    if (!byDay[day] || (m.fat && !byDay[day].fat)) {
+      byDay[day] = { ...m, dayKey: day };
+    }
+  });
+
+  const entries = Object.values(byDay)
+    .filter(m => m.weight)
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Compute derived columns
+  entries.forEach(e => {
+    e.fatKg = (e.fat && e.weight) ? +(e.weight * e.fat / 100).toFixed(1) : null;
+    e.muscleKg = (e.muscle && e.weight) ? +(e.weight * e.muscle / 100).toFixed(1) : null;
+    e.lbm = (e.fat && e.weight) ? +(e.weight * (1 - e.fat / 100)).toFixed(1) : null;
+  });
+
+  allEntries = entries;
+
+  updateKPIs(entries);
+  updateCharts(entries);
+  applyFilters();
+  calculateCalories();
+}
+
+function updateKPIs(entries) {
+  const latest = entries[entries.length - 1];
+  const prev = entries.length > 1 ? entries[entries.length - 2] : null;
+
+  document.getElementById('currentWeight').innerHTML = `${latest.weight}<span class="metric-unit"> kg</span>`;
+
+  if (prev) {
+    const diff = latest.weight - prev.weight;
+    setChange('weightChange', diff, 'kg', true);
+  }
+
+  const withFat = entries.filter(e => e.fat);
+  const latestFat = withFat[withFat.length - 1];
+  const prevFat = withFat.length > 1 ? withFat[withFat.length - 2] : null;
+
+  if (latestFat) {
+    document.getElementById('currentFat').innerHTML = `${latestFat.fat}<span class="metric-unit"> %</span>`;
+    if (prevFat) setChange('fatChange', latestFat.fat - prevFat.fat, '%', true);
+  }
+
+  const withMuscle = entries.filter(e => e.muscle);
+  const latestMuscle = withMuscle[withMuscle.length - 1];
+  const prevMuscle = withMuscle.length > 1 ? withMuscle[withMuscle.length - 2] : null;
+
+  if (latestMuscle) {
+    document.getElementById('currentMuscle').innerHTML = `${latestMuscle.muscle}<span class="metric-unit"> %</span>`;
+    if (prevMuscle) setChange('muscleChange', latestMuscle.muscle - prevMuscle.muscle, '%', false);
+  }
+
+  const withWater = entries.filter(e => e.water);
+  const latestWater = withWater[withWater.length - 1];
+  const prevWater = withWater.length > 1 ? withWater[withWater.length - 2] : null;
+
+  if (latestWater) {
+    document.getElementById('currentWater').innerHTML = `${latestWater.water}<span class="metric-unit"> %</span>`;
+    if (prevWater) setChange('waterChange', latestWater.water - prevWater.water, '%', false);
+  }
+
+  // BMI
+  const height = parseFloat(document.getElementById('heightInput').value) / 100;
+  if (height > 0) {
+    const bmi = (latest.weight / (height * height)).toFixed(1);
+    document.getElementById('currentBMI').textContent = bmi;
+    let cat = '';
+    if (bmi < 18.5) cat = 'Insuffisance ponderale';
+    else if (bmi < 25) cat = 'Poids normal';
+    else if (bmi < 30) cat = 'Surpoids';
+    else cat = 'Obesite';
+    document.getElementById('bmiCategory').textContent = cat;
+    document.getElementById('bmiCategory').className = 'metric-change neutral';
+  }
+
+  // Total loss (from max weight)
+  const maxWeight = Math.max(...entries.map(e => e.weight));
+  const totalDiff = latest.weight - maxWeight;
+  document.getElementById('totalLoss').innerHTML = `${totalDiff > 0 ? '+' : ''}${totalDiff.toFixed(1)}<span class="metric-unit"> kg</span>`;
+  document.getElementById('totalLossPeriod').textContent = `depuis le max de ${maxWeight} kg`;
+  document.getElementById('totalLossPeriod').className = `metric-change ${totalDiff <= 0 ? 'positive' : 'negative'}`;
+
+  // Lean body mass KPI
+  const withLBM = entries.filter(e => e.lbm);
+  const latestLBM = withLBM[withLBM.length - 1];
+  const prevLBM = withLBM.length > 1 ? withLBM[withLBM.length - 2] : null;
+  if (latestLBM) {
+    document.getElementById('currentLBM').innerHTML = `${latestLBM.lbm}<span class="metric-unit"> kg</span>`;
+    if (prevLBM) setChange('lbmChange', latestLBM.lbm - prevLBM.lbm, 'kg', false);
+  }
+
+  // Protein target: 1.6 - 2.0 g/kg for recomposition
+  const w = latest.weight;
+  const proteinLow = Math.round(w * 1.6);
+  const proteinHigh = Math.round(w * 2.0);
+  const proteinIdeal = Math.round(w * 1.8);
+  // 1 egg = ~13g protein (large egg, ~60g)
+  const eggsNeeded = Math.ceil(proteinIdeal / 13);
+  document.getElementById('proteinTarget').innerHTML = `${proteinIdeal}<span class="metric-unit"> g</span>`;
+  document.getElementById('proteinRange').innerHTML = `Fourchette: ${proteinLow} - ${proteinHigh} g (1.6 - 2.0 g/kg)`;
+  document.getElementById('proteinRange').className = 'metric-change neutral';
+  document.getElementById('proteinEggs').innerHTML = `~${eggsNeeded} oeufs/jour en equivalent (~13g prot/oeuf)`;
+}
+
+function setChange(id, diff, unit, lowerIsBetter) {
+  const el = document.getElementById(id);
+  const sign = diff > 0 ? '+' : '';
+  el.textContent = `${sign}${diff.toFixed(1)} ${unit}`;
+  const good = lowerIsBetter ? diff <= 0 : diff >= 0;
+  el.className = `metric-change ${diff === 0 ? 'neutral' : good ? 'positive' : 'negative'}`;
+}
+
+// Linear regression: returns { points, slopePerDay }
+function linearTrend(dates, values) {
+  const n = dates.length;
+  if (n < 2) return { points: values, slopePerDay: 0 };
+  const t0 = new Date(dates[0]).getTime();
+  const x = dates.map(d => (new Date(d).getTime() - t0) / 86400000);
+  const y = values;
+
+  const sumX = x.reduce((a, b) => a + b, 0);
+  const sumY = y.reduce((a, b) => a + b, 0);
+  const sumXY = x.reduce((a, xi, i) => a + xi * y[i], 0);
+  const sumX2 = x.reduce((a, xi) => a + xi * xi, 0);
+
+  const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+  const intercept = (sumY - slope * sumX) / n;
+
+  return {
+    points: x.map(xi => +(slope * xi + intercept).toFixed(2)),
+    slopePerDay: slope
+  };
+}
+
+// Format slope into a readable rate string
+function formatRate(slopePerDay, unit) {
+  const perWeek = slopePerDay * 7;
+  const perMonth = slopePerDay * 30.44;
+
+  // For weight (kg): show per week if small, per month otherwise
+  if (unit === 'kg') {
+    if (Math.abs(perWeek) >= 0.1) {
+      const sign = perWeek > 0 ? '+' : '';
+      return `${sign}${perWeek.toFixed(1)} kg/sem (${(perMonth).toFixed(1)} kg/mois)`;
+    }
+    const gPerWeek = perWeek * 1000;
+    const sign = gPerWeek > 0 ? '+' : '';
+    return `${sign}${Math.round(gPerWeek)} g/sem (${(perMonth).toFixed(1)} kg/mois)`;
+  }
+
+  // For percentages
+  const sign = perMonth > 0 ? '+' : '';
+  return `${sign}${perMonth.toFixed(1)} pts/mois`;
+}
+
+function trendDataset(label, dates, values, color, unit) {
+  const { points, slopePerDay } = linearTrend(dates, values);
+  const rate = formatRate(slopePerDay, unit || '%');
+  return {
+    label: `${label}: ${rate}`,
+    data: points,
+    borderColor: color,
+    borderDash: [8, 4],
+    borderWidth: 2,
+    pointRadius: 0,
+    pointHoverRadius: 0,
+    fill: false,
+    tension: 0,
+  };
+}
+
+function updateCharts(entries) {
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { labels: { color: '#9ca3af', font: { size: 11 } } } },
+    scales: {
+      x: {
+        type: 'time',
+        time: { unit: 'week', tooltipFormat: 'dd MMM yyyy' },
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#9ca3af', font: { size: 10 } }
+      },
+      y: {
+        grid: { color: 'rgba(255,255,255,0.05)' },
+        ticks: { color: '#9ca3af', font: { size: 10 } }
+      }
+    }
+  };
+
+  const dates = entries.map(e => e.date);
+  const weights = entries.map(e => e.weight);
+
+  // Weight chart + trendline
+  if (charts.weight) charts.weight.destroy();
+  charts.weight = new Chart(document.getElementById('weightChart'), {
+    type: 'line',
+    data: {
+      labels: dates,
+      datasets: [
+        {
+          label: 'Poids (kg)',
+          data: weights,
+          borderColor: '#818cf8',
+          backgroundColor: 'rgba(129,140,248,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          pointHoverRadius: 5,
+        },
+        trendDataset('Tendance poids', dates, weights, '#818cf8', 'kg')
+      ]
+    },
+    options: chartOptions
+  });
+
+  // Body comp chart + trendlines
+  const compEntries = entries.filter(e => e.fat && e.muscle && e.bone);
+  const compDates = compEntries.map(e => e.date);
+  const fatVals = compEntries.map(e => e.fat);
+  const muscleVals = compEntries.map(e => e.muscle);
+
+  if (charts.bodyComp) charts.bodyComp.destroy();
+  charts.bodyComp = new Chart(document.getElementById('bodyCompChart'), {
+    type: 'line',
+    data: {
+      labels: compDates,
+      datasets: [
+        { label: 'Graisse (%)', data: fatVals, borderColor: '#f472b6', backgroundColor: 'rgba(244,114,182,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Muscle (%)', data: muscleVals, borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+        { label: 'Os (%)', data: compEntries.map(e => e.bone), borderColor: '#fbbf24', backgroundColor: 'rgba(251,191,36,0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+        trendDataset('Tendance graisse', compDates, fatVals, '#f472b6', '%'),
+        trendDataset('Tendance muscle', compDates, muscleVals, '#34d399', '%'),
+      ]
+    },
+    options: chartOptions
+  });
+
+  // Fat vs Muscle + trendlines
+  if (charts.fatMuscle) charts.fatMuscle.destroy();
+  charts.fatMuscle = new Chart(document.getElementById('fatMuscleChart'), {
+    type: 'line',
+    data: {
+      labels: compDates,
+      datasets: [
+        { label: 'Graisse (%)', data: fatVals, borderColor: '#f472b6', tension: 0.3, pointRadius: 2, yAxisID: 'y' },
+        { label: 'Muscle (%)', data: muscleVals, borderColor: '#34d399', tension: 0.3, pointRadius: 2, yAxisID: 'y1' },
+        { ...trendDataset('Tendance graisse', compDates, fatVals, '#f472b6', '%'), yAxisID: 'y' },
+        { ...trendDataset('Tendance muscle', compDates, muscleVals, '#34d399', '%'), yAxisID: 'y1' },
+      ]
+    },
+    options: {
+      ...chartOptions,
+      scales: {
+        ...chartOptions.scales,
+        y: { ...chartOptions.scales.y, position: 'left', title: { display: true, text: 'Graisse %', color: '#f472b6' } },
+        y1: { ...chartOptions.scales.y, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Muscle %', color: '#34d399' } },
+      }
+    }
+  });
+
+  // Water chart + trendline
+  const waterEntries = entries.filter(e => e.water);
+  const waterDates = waterEntries.map(e => e.date);
+  const waterVals = waterEntries.map(e => e.water);
+
+  if (charts.water) charts.water.destroy();
+  charts.water = new Chart(document.getElementById('waterChart'), {
+    type: 'line',
+    data: {
+      labels: waterDates,
+      datasets: [
+        {
+          label: 'Eau (%)',
+          data: waterVals,
+          borderColor: '#60a5fa',
+          backgroundColor: 'rgba(96,165,250,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+        },
+        trendDataset('Tendance eau', waterDates, waterVals, '#60a5fa', '%')
+      ]
+    },
+    options: chartOptions
+  });
+}
+
+// ============== TABLE WITH FILTERS, SORT, PAGINATION ==============
+
+function applyFilters() {
+  const dateFrom = document.getElementById('filterDateFrom').value;
+  const dateTo = document.getElementById('filterDateTo').value;
+  const metricFilter = document.getElementById('filterMetric').value;
+
+  filteredEntries = allEntries.filter(e => {
+    const day = e.dayKey || e.date.substring(0, 10);
+    if (dateFrom && day < dateFrom) return false;
+    if (dateTo && day > dateTo) return false;
+    if (metricFilter === 'complete' && (!e.fat || !e.muscle)) return false;
+    if (metricFilter === 'weight-only' && e.fat) return false;
+    return true;
+  });
+
+  // Apply sort
+  sortEntries();
+  currentPage = 1;
+  renderTable();
+}
+
+function sortTable(col) {
+  if (currentSort.col === col) {
+    currentSort.asc = !currentSort.asc;
+  } else {
+    currentSort.col = col;
+    currentSort.asc = col === 'date' ? false : true;
+  }
+  sortEntries();
+  renderTable();
+}
+
+function sortEntries() {
+  const { col, asc } = currentSort;
+  filteredEntries.sort((a, b) => {
+    let va, vb;
+    if (col === 'date') {
+      va = new Date(a.date).getTime();
+      vb = new Date(b.date).getTime();
+    } else {
+      va = a[col] ?? -Infinity;
+      vb = b[col] ?? -Infinity;
+    }
+    return asc ? va - vb : vb - va;
+  });
+
+  // Update sort arrows
+  document.querySelectorAll('.sort-arrow').forEach(el => el.textContent = '');
+  const arrow = document.getElementById(`sort-${col}`);
+  if (arrow) arrow.textContent = asc ? ' ↑' : ' ↓';
+}
+
+function renderTable() {
+  const rowsPer = document.getElementById('rowsPerPage').value;
+  const perPage = rowsPer === 'all' ? filteredEntries.length : parseInt(rowsPer);
+  const totalPages = Math.max(1, Math.ceil(filteredEntries.length / perPage));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage - 1) * perPage;
+  const pageEntries = filteredEntries.slice(start, start + perPage);
+
+  document.getElementById('rowCount').textContent =
+    `${filteredEntries.length} mesures sur ${allEntries.length} total`;
+
+  const tbody = document.getElementById('historyTable');
+  tbody.innerHTML = pageEntries.map(e => {
+    const d = new Date(e.date);
+    const dateStr = d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    return `<tr>
+      <td>${dateStr}</td>
+      <td><strong>${e.weight} kg</strong></td>
+      <td>${e.fat ? e.fat + '%' : '<span style="color:var(--border)">-</span>'}</td>
+      <td>${e.muscle ? e.muscle + '%' : '<span style="color:var(--border)">-</span>'}</td>
+      <td>${e.bone ? e.bone + '%' : '<span style="color:var(--border)">-</span>'}</td>
+      <td>${e.water ? e.water + '%' : '<span style="color:var(--border)">-</span>'}</td>
+      <td>${e.fatKg != null ? e.fatKg + ' kg' : '<span style="color:var(--border)">-</span>'}</td>
+      <td>${e.muscleKg != null ? e.muscleKg + ' kg' : '<span style="color:var(--border)">-</span>'}</td>
+      <td>${e.lbm != null ? e.lbm + ' kg' : '<span style="color:var(--border)">-</span>'}</td>
+    </tr>`;
+  }).join('');
+
+  // Pagination
+  const pag = document.getElementById('pagination');
+  if (totalPages <= 1) {
+    pag.innerHTML = '';
+    return;
+  }
+  pag.innerHTML = `
+    <button onclick="goPage(1)" ${currentPage === 1 ? 'disabled' : ''}>&#171;</button>
+    <button onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>&#8249;</button>
+    <span class="page-info">Page ${currentPage} / ${totalPages}</span>
+    <button onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>&#8250;</button>
+    <button onclick="goPage(${totalPages})" ${currentPage === totalPages ? 'disabled' : ''}>&#187;</button>
+  `;
+}
+
+function goPage(p) {
+  currentPage = p;
+  renderTable();
+}
+
+function exportCSV() {
+  const headers = ['Date', 'Poids', 'Graisse%', 'Muscle%', 'Os%', 'Eau%', 'Graisse_kg', 'Muscle_kg', 'Masse_maigre_kg'];
+  const rows = filteredEntries.map(e => [
+    e.date.substring(0, 10),
+    e.weight, e.fat || '', e.muscle || '', e.bone || '', e.water || '',
+    e.fatKg || '', e.muscleKg || '', e.lbm || ''
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `fitness-export-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ============== CALORIE CALCULATOR (PRECISION) ==============
+
+function calculateCalories() {
+  if (!rawData || !rawData.measurements) return;
+
+  const entries = rawData.measurements.filter(m => m.weight).sort((a, b) => new Date(b.date) - new Date(a.date));
+  const weight = entries[0].weight;
+  const height = parseFloat(document.getElementById('heightInput').value);
+  const age = parseInt(document.getElementById('ageInput').value);
+  const sex = document.querySelector('input[name="sex"]:checked').value;
+  const neatMult = parseFloat(document.getElementById('neatLevel').value);
+  const sportCal = parseFloat(document.getElementById('sportCalories').value) || 0;
+  const goalDir = document.getElementById('goalDirection').value;
+  const goalAmount = parseFloat(document.getElementById('goalAmount').value);
+  const adaptEnabled = document.querySelector('input[name="adaptation"]:checked').value === 'on';
+
+  // Find latest body fat reading
+  const withFat = rawData.measurements.filter(m => m.fat && m.fat > 10 && m.fat < 50);
+  withFat.sort((a, b) => new Date(b.date) - new Date(a.date));
+  const latestFatPct = withFat.length > 0 ? withFat[0].fat : null;
+
+  // ---- KATCH-McARDLE (requires body fat %) ----
+  // BMR = 370 + 21.6 * LBM
+  // LBM = weight * (1 - fat/100)
+  let katchBMR = null;
+  let lbm = null;
+  if (latestFatPct) {
+    lbm = weight * (1 - latestFatPct / 100);
+    katchBMR = 370 + 21.6 * lbm;
+  }
+
+  // ---- MIFFLIN-ST JEOR ----
+  let mifflinBMR;
+  if (sex === 'M') {
+    mifflinBMR = 10 * weight + 6.25 * height - 5 * age + 5;
+  } else {
+    mifflinBMR = 10 * weight + 6.25 * height - 5 * age - 161;
+  }
+
+  // Use Katch-McArdle if body fat is available, else Mifflin
+  let bmr = katchBMR || mifflinBMR;
+  const usingKatch = !!katchBMR;
+
+  // ---- METABOLIC ADAPTATION ----
+  // When in prolonged deficit, BMR drops ~1% per kg lost beyond initial weight
+  // We estimate initial weight from the earliest measurement
+  let adaptReduction = 0;
+  if (adaptEnabled) {
+    const sorted = rawData.measurements.filter(m => m.weight).sort((a, b) => new Date(a.date) - new Date(b.date));
+    const initialWeight = sorted[0].weight;
+    const kgLost = Math.max(0, initialWeight - weight);
+    // Research: ~1% BMR reduction per kg lost (Rosenbaum & Leibel, 2010)
+    adaptReduction = bmr * 0.01 * kgLost;
+    bmr -= adaptReduction;
+  }
+
+  // ---- TDEE = BMR * NEAT multiplier + Sport ----
+  // NEAT multiplier covers all non-exercise activity (fidgeting, posture, walking, etc.)
+  const tdeeBeforeSport = bmr * neatMult;
+  const tdee = tdeeBeforeSport + sportCal;
+
+  // ---- TEF (Thermic Effect of Food) ----
+  // TEF is ~10% of total caloric intake. Since we're calculating target intake,
+  // we need to account for TEF in a circular way:
+  // Intake = TDEE_net + adjustment, where TDEE_net accounts for TEF
+  // Simplified: TEF raises expenditure by ~10% of intake
+  // So effective TDEE = TDEE / (1 - 0.10) ... but standard practice is to
+  // include TEF within the activity multiplier. We add it as transparency.
+  const tefEstimate = Math.round(tdee * 0.10);
+
+  // ---- GOAL ADJUSTMENT ----
+  // 1 kg of body tissue change ≈ 7700 kcal (mix of fat and lean)
+  let dailyAdjustment = 0;
+  if (goalDir === 'lose') {
+    dailyAdjustment = -(goalAmount / 1000) * 7700 / 7;
+  } else if (goalDir === 'gain') {
+    dailyAdjustment = (goalAmount / 1000) * 7700 / 7;
+  }
+
+  const target = Math.round(tdee + dailyAdjustment);
+
+  // Safety floor
+  const safeFloor = sex === 'F' ? 1200 : 1500;
+  const safeTarget = Math.max(target, safeFloor);
+
+  // ---- DISPLAY ----
+  document.getElementById('katchBMR').textContent = katchBMR ? Math.round(katchBMR + adaptReduction) : 'N/A';
+  document.getElementById('katchBMR').style.color = usingKatch ? 'var(--accent2)' : 'var(--muted)';
+  document.getElementById('mifflinBMR').textContent = Math.round(mifflinBMR);
+  document.getElementById('mifflinBMR').style.color = !usingKatch ? 'var(--accent2)' : 'var(--muted)';
+
+  document.getElementById('katchBox').className = usingKatch ? 'formula-box active' : 'formula-box secondary';
+  document.getElementById('mifflinBox').className = !usingKatch ? 'formula-box active' : 'formula-box secondary';
+
+  document.getElementById('bmrValue').textContent = Math.round(bmr);
+  document.getElementById('tdeeValue').textContent = Math.round(tdee);
+  document.getElementById('deficitValue').textContent = `${dailyAdjustment > 0 ? '+' : ''}${Math.round(dailyAdjustment)}`;
+  document.getElementById('adaptValue').textContent = adaptEnabled ? `-${Math.round(adaptReduction)}` : 'OFF';
+  document.getElementById('tefValue').textContent = `~${tefEstimate}`;
+  document.getElementById('neatValue').textContent = `x${neatMult}`;
+  document.getElementById('dailyCalories').textContent = safeTarget;
+
+  // Macros: for deficit, higher protein is better (preserve muscle)
+  // 30% protein / 35% carbs / 35% fat (deficit-optimized)
+  // For maintenance/gain: 25% protein / 45% carbs / 30% fat
+  let pRatio, cRatio, fRatio;
+  if (goalDir === 'lose') {
+    pRatio = 0.30; cRatio = 0.35; fRatio = 0.35;
+  } else {
+    pRatio = 0.25; cRatio = 0.45; fRatio = 0.30;
+  }
+
+  document.getElementById('proteinValue').textContent = Math.round(safeTarget * pRatio / 4);
+  document.getElementById('carbValue').textContent = Math.round(safeTarget * cRatio / 4);
+  document.getElementById('fatMacroValue').textContent = Math.round(safeTarget * fRatio / 9);
+
+  // Projection
+  const proj = document.getElementById('goalProjection');
+  if (goalDir === 'maintain') {
+    proj.innerHTML = `Objectif: maintenir votre poids a <strong>${weight} kg</strong>.`;
+  } else {
+    const weeklyKg = goalAmount / 1000;
+    const targetWeight = goalDir === 'lose' ? weight - weeklyKg : weight + weeklyKg;
+    const in4Weeks = goalDir === 'lose' ? weight - weeklyKg * 4 : weight + weeklyKg * 4;
+    proj.innerHTML = `
+      Objectif: <strong>${goalDir === 'lose' ? 'perdre' : 'prendre'} ${goalAmount}g/sem</strong><br>
+      Semaine prochaine: ~<strong>${targetWeight.toFixed(1)} kg</strong> | Dans 1 mois: ~<strong>${in4Weeks.toFixed(1)} kg</strong><br>
+      ${safeTarget !== target ? `<span style="color:var(--warning);">Limite de securite appliquee (minimum ${safeFloor} kcal)</span>` : ''}
+    `;
+  }
+
+  // Explainer box
+  const expl = document.getElementById('calorieExplainer');
+  const formulaName = usingKatch ? 'Katch-McArdle' : 'Mifflin-St Jeor';
+  const formulaDetail = usingKatch
+    ? `<strong>Katch-McArdle</strong> : BMR = 370 + 21.6 x masse maigre<br>
+       Masse maigre = ${weight} kg x (1 - ${latestFatPct}%) = <strong>${lbm.toFixed(1)} kg</strong>`
+    : `<strong>Mifflin-St Jeor</strong> : BMR = 10 x poids + 6.25 x taille - 5 x age ${sex === 'M' ? '+ 5' : '- 161'}`;
+
+  let adaptDetail = '';
+  if (adaptEnabled && adaptReduction > 0) {
+    const kgLost = adaptReduction / (0.01 * (bmr + adaptReduction));
+    adaptDetail = `<br><br><strong>Adaptation metabolique</strong> : tu as perdu ~${kgLost.toFixed(1)} kg depuis ta premiere mesure.
+    Ton metabolisme s'est adapte, retirant environ <strong>${Math.round(adaptReduction)} kcal/jour</strong> de ton BMR theorique.
+    C'est une des raisons pour lesquelles tu peux avoir l'impression de ne pas perdre malgre un apport faible.`;
+  }
+
+  expl.innerHTML = `
+    <strong>Formule utilisee : ${formulaName}</strong><br>
+    ${formulaDetail}<br><br>
+    <strong>Calcul</strong> : BMR${adaptEnabled ? ' (apres adaptation)' : ''} ${Math.round(bmr)} x ${neatMult} (NEAT) + ${sportCal} (sport) = <strong>${Math.round(tdee)} kcal TDEE</strong><br>
+    Ajustement objectif : ${Math.round(dailyAdjustment)} kcal/jour → <strong>${safeTarget} kcal/jour</strong>
+    ${adaptDetail}
+    <br><br>
+    <strong>Pourquoi tu peux grossir meme sous 1400 kcal :</strong><br>
+    1. <strong>Retention d'eau</strong> : sel, stress (cortisol), cycle hormonal → +0.5 a 2 kg temporaires<br>
+    2. <strong>Recomposition</strong> : tu gagnes du muscle (62% → 68%) qui est plus dense que la graisse<br>
+    3. <strong>Glycogene</strong> : 1g stocke = 3g d'eau retenue<br>
+    4. <strong>Adaptation metabolique</strong> : ton corps economise l'energie apres une longue perte<br>
+    5. <strong>Pesee non a jeun</strong> : le contenu digestif pese 0.5-1.5 kg<br>
+    6. <strong>Creatine</strong> : la supplementation en creatine (depuis mars) provoque une retention de 1-2 kg d'eau intramusculaire. C'est positif (meilleure performance, muscles plus pleins), mais ca masque la perte de gras reelle sur la balance.
+    <br><br>
+    <strong>Objectif proteines :</strong> ${Math.round(weight * 1.6)}-${Math.round(weight * 2.0)}g/jour (1.6-2.0 g/kg).
+    Les proteines ont le TEF le plus eleve (~25% brulees a la digestion), preservent le muscle en deficit, et augmentent la satiete.
+  `;
+}
+
+// Init
+loadSettings();
+
+// Auto-load embedded data on startup
+rawData = EMBEDDED_DATA;
+processData();
+setStatus('Donnees chargees (integrees)', false);
+
+// Drag-and-drop support
+document.addEventListener('dragover', e => e.preventDefault());
+document.addEventListener('drop', async (e) => {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file && file.name.endsWith('.json')) {
+    const text = await file.text();
+    rawData = JSON.parse(text);
+    processData();
+    setStatus(`Charge: ${file.name}`, false);
+  }
+});
+</script>
+
+</body>
+</html>
