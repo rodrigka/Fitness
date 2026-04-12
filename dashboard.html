@@ -549,13 +549,8 @@
     </div>
 
     <div class="input-group">
-      <label>Objectif hebdomadaire</label>
+      <label>Objectif hebdomadaire (perte en seche, gain en prise de masse)</label>
       <div class="input-row">
-        <select id="goalDirection" onchange="recalculate()">
-          <option value="lose">Perdre</option>
-          <option value="gain">Prendre</option>
-          <option value="maintain">Maintenir</option>
-        </select>
         <input type="number" id="goalAmount" value="200" min="0" max="2000" step="50" onchange="recalculate()">
         <span class="unit-label">g / semaine</span>
       </div>
@@ -710,7 +705,6 @@ function loadSettings() {
   if (s.sex) document.querySelector(`input[name="sex"][value="${s.sex}"]`).checked = true;
   if (s.neatLevel) document.getElementById('neatLevel').value = s.neatLevel;
   if (s.sportCalories) document.getElementById('sportCalories').value = s.sportCalories;
-  if (s.goalDirection) document.getElementById('goalDirection').value = s.goalDirection;
   if (s.goalAmount) document.getElementById('goalAmount').value = s.goalAmount;
   if (s.adaptation) document.querySelector(`input[name="adaptation"][value="${s.adaptation}"]`).checked = true;
   if (s.phase) document.querySelector(`input[name="phase"][value="${s.phase}"]`).checked = true;
@@ -723,7 +717,6 @@ function saveSettings() {
     sex: document.querySelector('input[name="sex"]:checked').value,
     neatLevel: document.getElementById('neatLevel').value,
     sportCalories: document.getElementById('sportCalories').value,
-    goalDirection: document.getElementById('goalDirection').value,
     goalAmount: document.getElementById('goalAmount').value,
     adaptation: document.querySelector('input[name="adaptation"]:checked').value,
     phase: document.querySelector('input[name="phase"]:checked').value,
@@ -1379,7 +1372,6 @@ function calculateCalories() {
   const sex = document.querySelector('input[name="sex"]:checked').value;
   const neatMult = parseFloat(document.getElementById('neatLevel').value);
   const sportCal = parseFloat(document.getElementById('sportCalories').value) || 0;
-  const goalDir = document.getElementById('goalDirection').value;
   const goalAmount = parseFloat(document.getElementById('goalAmount').value);
   const adaptEnabled = document.querySelector('input[name="adaptation"]:checked').value === 'on';
 
@@ -1438,11 +1430,12 @@ function calculateCalories() {
   const tefEstimate = Math.round(tdee * 0.10);
 
   // ---- GOAL ADJUSTMENT ----
-  // 1 kg of body tissue change ≈ 7700 kcal (mix of fat and lean)
+  // Phase determines direction: sèche = deficit, prise de masse = surplus
+  const phase = document.querySelector('input[name="phase"]:checked').value;
   let dailyAdjustment = 0;
-  if (goalDir === 'lose') {
+  if (phase === 'cut') {
     dailyAdjustment = -(goalAmount / 1000) * 7700 / 7;
-  } else if (goalDir === 'gain') {
+  } else {
     dailyAdjustment = (goalAmount / 1000) * 7700 / 7;
   }
 
@@ -1469,7 +1462,6 @@ function calculateCalories() {
   document.getElementById('neatValue').textContent = `x${neatMult}`;
   document.getElementById('dailyCalories').textContent = safeTarget;
 
-  const phase = document.querySelector('input[name="phase"]:checked').value;
   let pRatio, cRatio, fRatio;
   if (phase === 'cut') {
     pRatio = 0.30; cRatio = 0.35; fRatio = 0.35;
@@ -1483,18 +1475,15 @@ function calculateCalories() {
 
   // Projection
   const proj = document.getElementById('goalProjection');
-  if (goalDir === 'maintain') {
-    proj.innerHTML = `Objectif: maintenir votre poids a <strong>${weight} kg</strong>.`;
-  } else {
-    const weeklyKg = goalAmount / 1000;
-    const targetWeight = goalDir === 'lose' ? weight - weeklyKg : weight + weeklyKg;
-    const in4Weeks = goalDir === 'lose' ? weight - weeklyKg * 4 : weight + weeklyKg * 4;
-    proj.innerHTML = `
-      Objectif: <strong>${goalDir === 'lose' ? 'perdre' : 'prendre'} ${goalAmount}g/sem</strong><br>
-      Semaine prochaine: ~<strong>${targetWeight.toFixed(1)} kg</strong> | Dans 1 mois: ~<strong>${in4Weeks.toFixed(1)} kg</strong><br>
-      ${safeTarget !== target ? `<span style="color:var(--warning);">Limite de securite appliquee (minimum ${safeFloor} kcal)</span>` : ''}
-    `;
-  }
+  const weeklyKg = goalAmount / 1000;
+  const isCut = phase === 'cut';
+  const targetWeight = isCut ? weight - weeklyKg : weight + weeklyKg;
+  const in4Weeks = isCut ? weight - weeklyKg * 4 : weight + weeklyKg * 4;
+  proj.innerHTML = `
+    Objectif (${isCut ? 'seche' : 'prise de masse'}): <strong>${isCut ? 'perdre' : 'prendre'} ${goalAmount}g/sem</strong><br>
+    Semaine prochaine: ~<strong>${targetWeight.toFixed(1)} kg</strong> | Dans 1 mois: ~<strong>${in4Weeks.toFixed(1)} kg</strong><br>
+    ${safeTarget !== target ? `<span style="color:var(--warning);">Limite de securite appliquee (minimum ${safeFloor} kcal)</span>` : ''}
+  `;
 
   updateProteinKPI();
 
@@ -1575,7 +1564,11 @@ function calculateCalories() {
 // Init
 loadSettings();
 const savedGoalWeight = localStorage.getItem('fitnessGoalWeight');
-if (savedGoalWeight) document.getElementById('goalWeightInput').value = savedGoalWeight;
+if (savedGoalWeight) {
+  document.getElementById('goalWeightInput').value = savedGoalWeight;
+} else {
+  localStorage.setItem('fitnessGoalWeight', '57');
+}
 
 // Auto-load from localStorage if available
 const savedData = localStorage.getItem('fitnessData');
