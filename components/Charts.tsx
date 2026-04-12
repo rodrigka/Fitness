@@ -279,7 +279,7 @@ export default function Charts({ entries }: ChartsProps) {
   if (!entries.length) return null;
 
   return (
-    <div className="grid grid-cols-2 gap-4 mb-6 max-[900px]:grid-cols-1">
+    <div className="grid grid-cols-2 gap-3 mb-4 max-[900px]:grid-cols-1">
       <ChartCard title="Evolution du poids">
         <canvas ref={weightRef} />
       </ChartCard>
@@ -307,9 +307,9 @@ function ChartCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5 min-h-[300px]">
+    <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
       <h2 className="text-sm font-semibold text-[#9ca3af] mb-3">{title}</h2>
-      <div className="max-h-[260px]">{children}</div>
+      <div className="relative h-[260px] max-[430px]:h-[200px]">{children}</div>
     </div>
   );
 }

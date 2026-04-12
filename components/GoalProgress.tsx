@@ -38,7 +38,7 @@ export default function GoalProgress({
     : currentWeight >= goalWeight;
 
   return (
-    <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5 mb-6">
+    <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5 mb-4">
       <div className="flex items-center justify-between flex-wrap gap-3 mb-4">
         <h2 className="text-sm font-semibold text-[#9ca3af]">
           Objectif poids

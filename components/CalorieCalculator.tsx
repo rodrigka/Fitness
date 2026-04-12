@@ -55,7 +55,7 @@ export default function CalorieCalculator({
   }
 
   return (
-    <div className="grid grid-cols-2 gap-4 mb-6 max-[900px]:grid-cols-1">
+    <div className="grid grid-cols-2 gap-3 mb-4 max-[900px]:grid-cols-1">
       {/* Settings panel */}
       <div className="bg-[#1a1d27] border border-[#2a2d3a] rounded-xl p-5">
         <h2 className="text-sm font-semibold text-[#9ca3af] mb-3">
@@ -257,7 +257,7 @@ export default function CalorieCalculator({
       </div>
 
       {/* Reminders */}
-      <div className="col-span-2 max-[900px]:col-span-1 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-xl p-4">
+      <div className="col-span-2 max-[900px]:col-span-1 bg-[rgba(96,165,250,0.08)] border border-[rgba(96,165,250,0.2)] rounded-xl p-3">
         <div className="mb-3">
           <strong className="text-[#818cf8]">Ton objectif du jour</strong>
           <br />

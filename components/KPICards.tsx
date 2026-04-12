@@ -64,7 +64,7 @@ export default function KPICards({ entries, phase, height }: KPICardsProps) {
   const protein = calculateProtein(latest.weight, phase);
 
   return (
-    <div className="grid grid-cols-4 gap-4 mb-6 max-[900px]:grid-cols-2 max-[430px]:grid-cols-2 max-[430px]:gap-2.5">
+    <div className="grid grid-cols-4 gap-3 mb-4 max-[900px]:grid-cols-2 max-[430px]:grid-cols-2 max-[430px]:gap-2">
       <Card label="Poids actuel">
         <Value value={latest.weight} unit="kg" />
         {prev && (
