@@ -664,6 +664,7 @@
         <option value="all">Tout afficher</option>
       </select>
       <button class="btn btn-outline btn-sm" onclick="exportCSV()">Exporter CSV</button>
+      <button class="btn btn-outline btn-sm" onclick="exportAppleHealth()" style="border-color:rgba(52,211,153,0.4);color:var(--accent2);">Exporter Apple Sante</button>
     </div>
   </div>
   <div class="row-count" id="rowCount"></div>
@@ -1361,6 +1362,28 @@ function exportCSV() {
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = `fitness-export-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+function exportAppleHealth() {
+  const headers = ['Date', 'Weight (kg)', 'Body Fat Percentage (%)', 'Lean Body Mass (kg)'];
+  const rows = filteredEntries
+    .filter(e => e.weight)
+    .map(e => {
+      const d = new Date(e.date);
+      const dateStr = d.toISOString().replace('T', ' ').substring(0, 19);
+      return [
+        dateStr,
+        e.weight,
+        e.fat || '',
+        e.lbm || ''
+      ];
+    });
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `apple-health-import-${new Date().toISOString().slice(0,10)}.csv`;
   a.click();
 }
 
