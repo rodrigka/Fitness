@@ -443,17 +443,9 @@
   </div>
   <div class="card" style="border-color: rgba(251,191,36,0.3); background: linear-gradient(135deg, var(--card), rgba(251,191,36,0.05));">
     <div class="metric-label">Proteines / jour (objectif)</div>
-    <div style="margin:6px 0 4px;">
-      <div class="radio-group" style="justify-content:center;">
-        <input type="radio" name="phase" id="phaseCut" value="cut" checked onchange="updateProteinKPI();recalculate()">
-        <label for="phaseCut">Seche</label>
-        <input type="radio" name="phase" id="phaseBulk" value="bulk" onchange="updateProteinKPI();recalculate()">
-        <label for="phaseBulk">Prise de masse</label>
-      </div>
-    </div>
     <div class="metric-value" id="proteinTarget">--<span class="metric-unit"> g</span></div>
     <div class="metric-change neutral" id="proteinRange">--</div>
-    <div class="metric-change neutral" id="proteinEggs" style="margin-top:2px;"></div>
+    <div class="metric-change neutral" id="proteinEggs" style="margin-top:2px;">~-- oeufs/jour</div>
   </div>
 </div>
 
@@ -463,7 +455,7 @@
     <h2 style="margin-bottom:0;">Objectif poids</h2>
     <div style="display:flex;gap:8px;align-items:center;">
       <label style="font-size:0.8rem;color:var(--muted);">Cible:</label>
-      <input type="number" id="goalWeightInput" value="55" min="30" max="200" step="0.1" style="width:80px;" onchange="updateGoalProgress()">
+      <input type="number" id="goalWeightInput" value="57" min="30" max="200" step="0.1" style="width:80px;" onchange="updateGoalProgress()">
       <span class="unit-label">kg</span>
     </div>
   </div>
@@ -524,6 +516,16 @@
         <label for="sexF">Femme</label>
         <input type="radio" name="sex" id="sexM" value="M" onchange="recalculate()">
         <label for="sexM">Homme</label>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>Phase actuelle</label>
+      <div class="radio-group">
+        <input type="radio" name="phase" id="phaseCut" value="cut" checked onchange="recalculate()">
+        <label for="phaseCut">Seche</label>
+        <input type="radio" name="phase" id="phaseBulk" value="bulk" onchange="recalculate()">
+        <label for="phaseBulk">Prise de masse</label>
       </div>
     </div>
 
@@ -699,8 +701,6 @@ let filteredEntries = [];
 let currentSort = { col: 'date', asc: false };
 let currentPage = 1;
 
-// Embedded fitness data
-const EMBEDDED_DATA = {"measurements":[{"date":"2026-04-09T11:03:55.994Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":59.1,"calories":null,"height":162},{"date":"2026-04-09T11:01:49.732Z","fat":28,"muscle":68,"bone":4,"water":50.3,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-09T11:01:09.951Z","fat":28,"muscle":68,"bone":4,"water":50.2,"weight":59.2,"calories":null,"height":null},{"date":"2026-04-09T11:00:30.327Z","fat":28,"muscle":68,"bone":4,"water":50.3,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-08T10:57:37.002Z","fat":28,"muscle":68,"bone":4,"water":50.1,"weight":59.3,"calories":null,"height":null},{"date":"2026-04-07T11:01:15.329Z","fat":29,"muscle":68,"bone":4,"water":50,"weight":59.6,"calories":null,"height":null},{"date":"2026-04-07T11:00:42.143Z","fat":29,"muscle":68,"bone":4,"water":50.1,"weight":59.5,"calories":null,"height":null},{"date":"2026-04-03T11:03:00.180Z","fat":29,"muscle":68,"bone":4,"water":49.8,"weight":59.2,"calories":null,"height":null},{"date":"2026-04-02T10:56:31.539Z","fat":29,"muscle":67,"bone":4,"water":49.4,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-02T10:55:58.089Z","fat":29,"muscle":67,"bone":4,"water":49.2,"weight":59.1,"calories":null,"height":null},{"date":"2026-04-01T11:10:47.288Z","fat":29,"muscle":67,"bone":4,"water":49.6,"weight":59.9,"calories":null,"height":null},{"date":"2026-04-01T11:10:04.419Z","fat":29,"muscle":67,"bone":4,"water":49.5,"weight":60,"calories":null,"height":null},{"date":"2026-03-31T18:12:40.428Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":59.1,"calories":null,"height":160},{"date":"2026-03-31T18:12:33.817Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":59.1,"calories":null,"height":158},{"date":"2026-03-30T11:10:37.565Z","fat":31,"muscle":65,"bone":4,"water":48.2,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-30T11:09:49.511Z","fat":31,"muscle":65,"bone":4,"water":48.1,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-30T11:09:08.765Z","fat":33,"muscle":64,"bone":3,"water":47.2,"weight":59.3,"calories":null,"height":null},{"date":"2026-03-29T12:14:09.827Z","fat":32,"muscle":65,"bone":4,"water":47.8,"weight":59.8,"calories":null,"height":null},{"date":"2026-03-28T11:03:53.471Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":59.4,"calories":null,"height":null},{"date":"2026-03-27T12:45:56.422Z","fat":34,"muscle":63,"bone":3,"water":46.5,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-14T13:58:34.346Z","fat":31,"muscle":66,"bone":4,"water":48.5,"weight":59.2,"calories":null,"height":null},{"date":"2026-03-13T12:36:52.275Z","fat":31,"muscle":66,"bone":4,"water":48.5,"weight":59,"calories":null,"height":null},{"date":"2026-03-13T12:36:08.951Z","fat":31,"muscle":66,"bone":4,"water":48.6,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-12T12:27:05.984Z","fat":31,"muscle":66,"bone":4,"water":48.6,"weight":59.5,"calories":null,"height":null},{"date":"2026-03-11T12:11:41.610Z","fat":30,"muscle":66,"bone":4,"water":48.7,"weight":59.5,"calories":null,"height":null},{"date":"2026-03-10T12:45:44.843Z","fat":30,"muscle":66,"bone":4,"water":49.1,"weight":59.7,"calories":null,"height":null},{"date":"2026-03-09T12:26:37.204Z","fat":30,"muscle":67,"bone":4,"water":49.1,"weight":59.5,"calories":null,"height":null},{"date":"2026-03-08T13:04:26.589Z","fat":32,"muscle":65,"bone":4,"water":47.8,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-06T12:24:26.737Z","fat":30,"muscle":66,"bone":4,"water":48.7,"weight":59.4,"calories":null,"height":null},{"date":"2026-03-04T13:08:28.787Z","fat":31,"muscle":66,"bone":4,"water":48.3,"weight":59.2,"calories":null,"height":null},{"date":"2026-03-04T13:07:41.722Z","fat":31,"muscle":66,"bone":4,"water":48.4,"weight":59.1,"calories":null,"height":null},{"date":"2026-03-02T12:01:59.575Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-02T12:00:53.737Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":59.6,"calories":null,"height":null},{"date":"2026-03-01T13:02:36.425Z","fat":32,"muscle":65,"bone":3,"water":47.6,"weight":60.1,"calories":null,"height":null},{"date":"2026-02-28T14:24:24.254Z","fat":32,"muscle":65,"bone":3,"water":47.8,"weight":60.4,"calories":null,"height":null},{"date":"2026-02-26T12:14:56.008Z","fat":31,"muscle":65,"bone":3,"water":48.1,"weight":60.1,"calories":null,"height":null},{"date":"2026-02-25T12:14:52.202Z","fat":31,"muscle":65,"bone":3,"water":48,"weight":60.4,"calories":null,"height":null},{"date":"2026-02-23T11:55:42.936Z","fat":32,"muscle":64,"bone":3,"water":47.6,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-22T12:21:01.358Z","fat":32,"muscle":65,"bone":3,"water":47.7,"weight":61.6,"calories":null,"height":null},{"date":"2026-02-21T14:37:25.539Z","fat":31,"muscle":65,"bone":4,"water":48.3,"weight":61.3,"calories":null,"height":null},{"date":"2026-02-19T12:14:30.721Z","fat":31,"muscle":65,"bone":3,"water":48.1,"weight":60.9,"calories":null,"height":null},{"date":"2026-02-17T12:10:56.000Z","fat":31,"muscle":65,"bone":3,"water":48.3,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-16T12:08:09.839Z","fat":31,"muscle":65,"bone":3,"water":48.1,"weight":60.7,"calories":null,"height":null},{"date":"2026-02-15T13:50:17.781Z","fat":29,"muscle":68,"bone":4,"water":50.1,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-15T13:48:17.274Z","fat":20,"muscle":76,"bone":4,"water":55.9,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-08T15:12:07.043Z","fat":32,"muscle":65,"bone":3,"water":47.9,"weight":60.5,"calories":null,"height":null},{"date":"2026-02-07T12:51:01.657Z","fat":32,"muscle":64,"bone":3,"water":47.5,"weight":60.6,"calories":null,"height":null},{"date":"2026-02-01T15:37:59.914Z","fat":32,"muscle":64,"bone":3,"water":47.4,"weight":60.5,"calories":null,"height":null},{"date":"2026-01-18T13:05:37.144Z","fat":33,"muscle":63,"bone":3,"water":46.9,"weight":61.8,"calories":null,"height":null},{"date":"2026-01-17T13:39:02.695Z","fat":33,"muscle":64,"bone":3,"water":47.2,"weight":61.8,"calories":null,"height":null},{"date":"2025-12-21T16:35:32.091Z","fat":31,"muscle":65,"bone":4,"water":48.1,"weight":61.7,"calories":null,"height":null},{"date":"2025-12-13T13:56:20.348Z","fat":33,"muscle":64,"bone":3,"water":47.2,"weight":62.1,"calories":null,"height":null},{"date":"2025-12-05T16:12:25.676Z","fat":32,"muscle":64,"bone":3,"water":47.7,"weight":62,"calories":null,"height":null},{"date":"2025-12-02T14:14:39.937Z","fat":33,"muscle":64,"bone":3,"water":47.3,"weight":62.4,"calories":null,"height":null},{"date":"2025-12-01T14:11:10.164Z","fat":33,"muscle":64,"bone":3,"water":47,"weight":62.5,"calories":null,"height":null},{"date":"2025-11-29T16:01:39.684Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":62.4,"calories":null,"height":null},{"date":"2025-11-25T15:35:57.457Z","fat":32,"muscle":64,"bone":4,"water":47.8,"weight":62.7,"calories":null,"height":null},{"date":"2025-11-09T15:56:46.617Z","fat":33,"muscle":64,"bone":3,"water":47.5,"weight":63,"calories":null,"height":null},{"date":"2025-10-30T14:54:51.879Z","fat":33,"muscle":63,"bone":3,"water":46.9,"weight":63.6,"calories":null,"height":null},{"date":"2025-10-28T11:07:23.368Z","fat":33,"muscle":63,"bone":3,"water":46.9,"weight":63.7,"calories":null,"height":null},{"date":"2025-10-26T13:59:14.589Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":64,"calories":null,"height":null},{"date":"2025-10-25T14:04:14.806Z","fat":34,"muscle":63,"bone":3,"water":46.8,"weight":64.5,"calories":null,"height":null},{"date":"2025-10-24T14:14:45.787Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":64.2,"calories":null,"height":null},{"date":"2025-10-22T09:45:14.729Z","fat":34,"muscle":62,"bone":3,"water":46.4,"weight":63.8,"calories":null,"height":null},{"date":"2025-10-18T16:21:37.703Z","fat":34,"muscle":63,"bone":3,"water":46.5,"weight":63.7,"calories":null,"height":null},{"date":"2025-10-12T13:09:18.696Z","fat":34,"muscle":63,"bone":3,"water":46.8,"weight":64.5,"calories":null,"height":null},{"date":"2025-10-10T13:33:03.180Z","fat":35,"muscle":62,"bone":3,"water":46,"weight":64.5,"calories":null,"height":null},{"date":"2025-09-29T16:49:54.675Z","fat":33,"muscle":63,"bone":3,"water":47.1,"weight":64.3,"calories":null,"height":null},{"date":"2025-09-27T09:08:31.988Z","fat":35,"muscle":62,"bone":3,"water":46,"weight":65.5,"calories":null,"height":null},{"date":"2025-09-24T15:09:09.793Z","fat":34,"muscle":63,"bone":3,"water":46.6,"weight":65.6,"calories":null,"height":null},{"date":"2025-09-22T16:17:41.206Z","fat":33,"muscle":63,"bone":3,"water":47,"weight":65.5,"calories":null,"height":null},{"date":"2025-09-14T15:06:26.981Z","fat":35,"muscle":62,"bone":3,"water":46.1,"weight":66.1,"calories":null,"height":null},{"date":"2025-09-09T15:21:43.483Z","fat":33,"muscle":64,"bone":3,"water":47.7,"weight":66,"calories":null,"height":null},{"date":"2025-09-09T15:19:13.869Z","fat":33,"muscle":64,"bone":3,"water":47.7,"weight":66.1,"calories":null,"height":null},{"date":"2025-08-20T06:37:10.057Z","fat":null,"muscle":null,"bone":null,"water":null,"weight":64,"calories":null,"height":158}]};
 
 // Save/load settings from localStorage
 function loadSettings() {
@@ -733,6 +733,7 @@ function saveSettings() {
 function recalculate() {
   saveSettings();
   if (!rawData) return;
+  updateProteinKPI();
   calculateCalories();
 }
 
@@ -970,7 +971,9 @@ function updateGoalProgress() {
       const etaDate = new Date(Date.now() + daysLeft * 86400000);
       const formatted = etaDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
       const weeksLeft = Math.round(daysLeft / 7);
-      eta.innerHTML = `A ce rythme (<strong>${(ratePerDay * 7).toFixed(0)}g/sem</strong>), objectif atteint vers le <strong>${formatted}</strong> (~${weeksLeft} semaines)`;
+      const gPerWeek = Math.abs(ratePerDay * 7 * 1000);
+      const rateStr = gPerWeek >= 100 ? Math.round(gPerWeek) + 'g' : gPerWeek.toFixed(0) + 'g';
+      eta.innerHTML = `A ce rythme (<strong>-${rateStr}/sem</strong>), objectif atteint vers le <strong>${formatted}</strong> (~${weeksLeft} semaines)`;
     } else if (!isLosing && ratePerDay > 0) {
       const toGain = goalWeight - currentWeight;
       if (toGain > 0) {
@@ -991,30 +994,30 @@ function updateGoalProgress() {
   localStorage.setItem('fitnessGoalWeight', goalWeight);
 }
 
+function getProteinRatios() {
+  const phase = document.querySelector('input[name="phase"]:checked').value;
+  if (phase === 'cut') {
+    return { low: 1.8, high: 2.2, ideal: 2.0, label: 'seche' };
+  } else {
+    return { low: 1.4, high: 1.8, ideal: 1.6, label: 'prise de masse' };
+  }
+}
+
 function updateProteinKPI() {
   if (!allEntries.length) return;
   const latest = allEntries[allEntries.length - 1];
   const w = latest.weight;
-  const phase = document.querySelector('input[name="phase"]:checked').value;
+  const r = getProteinRatios();
 
-  let lowRatio, highRatio, idealRatio, phaseLabel;
-  if (phase === 'cut') {
-    lowRatio = 1.6; highRatio = 2.2; idealRatio = 1.8;
-    phaseLabel = 'seche';
-  } else {
-    lowRatio = 1.4; highRatio = 1.8; idealRatio = 1.6;
-    phaseLabel = 'prise de masse';
-  }
-
-  const proteinLow = Math.round(w * lowRatio);
-  const proteinHigh = Math.round(w * highRatio);
-  const proteinIdeal = Math.round(w * idealRatio);
+  const proteinLow = Math.round(w * r.low);
+  const proteinHigh = Math.round(w * r.high);
+  const proteinIdeal = Math.round(w * r.ideal);
   const eggsNeeded = Math.ceil(proteinIdeal / 13);
 
   document.getElementById('proteinTarget').innerHTML = `${proteinIdeal}<span class="metric-unit"> g</span>`;
-  document.getElementById('proteinRange').innerHTML = `Fourchette: ${proteinLow} - ${proteinHigh} g (${lowRatio} - ${highRatio} g/kg, ${phaseLabel})`;
+  document.getElementById('proteinRange').innerHTML = `${proteinLow} - ${proteinHigh} g (${r.low} - ${r.high} g/kg, ${r.label})`;
   document.getElementById('proteinRange').className = 'metric-change neutral';
-  document.getElementById('proteinEggs').innerHTML = `~${eggsNeeded} oeufs/jour en equivalent (~13g prot/oeuf)`;
+  document.getElementById('proteinEggs').innerHTML = `~${eggsNeeded} oeufs/jour (~13g prot/oeuf)`;
 }
 
 function setChange(id, diff, unit, lowerIsBetter) {
@@ -1497,15 +1500,10 @@ function calculateCalories() {
 
   // Daily reminders - dynamic, based on current data
   const expl = document.getElementById('calorieExplainer');
-  let protLowR, protHighR, protIdealR;
-  if (phase === 'cut') {
-    protLowR = 1.6; protHighR = 2.2; protIdealR = 1.8;
-  } else {
-    protLowR = 1.4; protHighR = 1.8; protIdealR = 1.6;
-  }
-  const proteinTarget = Math.round(weight * protIdealR);
-  const proteinLow = Math.round(weight * protLowR);
-  const proteinHigh = Math.round(weight * protHighR);
+  const protRatios = getProteinRatios();
+  const proteinTarget = Math.round(weight * protRatios.ideal);
+  const proteinLow = Math.round(weight * protRatios.low);
+  const proteinHigh = Math.round(weight * protRatios.high);
 
   // Build dynamic reminders based on current situation
   const reminders = [];
@@ -1579,7 +1577,7 @@ loadSettings();
 const savedGoalWeight = localStorage.getItem('fitnessGoalWeight');
 if (savedGoalWeight) document.getElementById('goalWeightInput').value = savedGoalWeight;
 
-// Auto-load: prefer localStorage, fallback to embedded data
+// Auto-load from localStorage if available
 const savedData = localStorage.getItem('fitnessData');
 if (savedData) {
   try {
@@ -1587,14 +1585,10 @@ if (savedData) {
     processData();
     setStatus('Donnees chargees (sauvegarde locale)', false);
   } catch (e) {
-    rawData = EMBEDDED_DATA;
-    processData();
-    setStatus('Donnees chargees (integrees)', false);
+    setStatus('Aucune donnee — charge un fichier JSON', false);
   }
 } else {
-  rawData = EMBEDDED_DATA;
-  processData();
-  setStatus('Donnees chargees (integrees)', false);
+  setStatus('Aucune donnee — charge un fichier JSON', false);
 }
 
 // Drag-and-drop support
