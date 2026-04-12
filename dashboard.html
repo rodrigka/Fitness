@@ -443,10 +443,39 @@
   </div>
   <div class="card" style="border-color: rgba(251,191,36,0.3); background: linear-gradient(135deg, var(--card), rgba(251,191,36,0.05));">
     <div class="metric-label">Proteines / jour (objectif)</div>
+    <div style="margin:6px 0 4px;">
+      <div class="radio-group" style="justify-content:center;">
+        <input type="radio" name="phase" id="phaseCut" value="cut" checked onchange="updateProteinKPI();recalculate()">
+        <label for="phaseCut">Seche</label>
+        <input type="radio" name="phase" id="phaseBulk" value="bulk" onchange="updateProteinKPI();recalculate()">
+        <label for="phaseBulk">Prise de masse</label>
+      </div>
+    </div>
     <div class="metric-value" id="proteinTarget">--<span class="metric-unit"> g</span></div>
     <div class="metric-change neutral" id="proteinRange">--</div>
     <div class="metric-change neutral" id="proteinEggs" style="margin-top:2px;"></div>
   </div>
+</div>
+
+<!-- Goal Progress -->
+<div class="card" id="goalProgressCard" style="margin-bottom:24px;display:none;">
+  <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+    <h2 style="margin-bottom:0;">Objectif poids</h2>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <label style="font-size:0.8rem;color:var(--muted);">Cible:</label>
+      <input type="number" id="goalWeightInput" value="55" min="30" max="200" step="0.1" style="width:80px;" onchange="updateGoalProgress()">
+      <span class="unit-label">kg</span>
+    </div>
+  </div>
+  <div style="position:relative;height:32px;background:var(--bg);border-radius:16px;overflow:hidden;border:1px solid var(--border);">
+    <div id="goalProgressBar" style="height:100%;border-radius:16px;transition:width 0.5s ease;display:flex;align-items:center;justify-content:flex-end;padding-right:12px;font-size:0.75rem;font-weight:700;min-width:40px;"></div>
+  </div>
+  <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:0.8rem;color:var(--muted);">
+    <span id="goalStartLabel">--</span>
+    <span id="goalCurrentLabel" style="color:var(--accent);font-weight:600;">--</span>
+    <span id="goalTargetLabel">--</span>
+  </div>
+  <div id="goalETA" style="margin-top:12px;font-size:0.85rem;color:var(--muted);text-align:center;"></div>
 </div>
 
 <!-- Charts -->
@@ -466,6 +495,10 @@
   <div class="card chart-card">
     <h2>Hydratation</h2>
     <canvas id="waterChart"></canvas>
+  </div>
+  <div class="card chart-card">
+    <h2>Masse maigre vs Masse grasse (kg)</h2>
+    <canvas id="lbmFatKgChart"></canvas>
   </div>
 </div>
 
@@ -680,6 +713,7 @@ function loadSettings() {
   if (s.goalDirection) document.getElementById('goalDirection').value = s.goalDirection;
   if (s.goalAmount) document.getElementById('goalAmount').value = s.goalAmount;
   if (s.adaptation) document.querySelector(`input[name="adaptation"][value="${s.adaptation}"]`).checked = true;
+  if (s.phase) document.querySelector(`input[name="phase"][value="${s.phase}"]`).checked = true;
 }
 
 function saveSettings() {
@@ -692,6 +726,7 @@ function saveSettings() {
     goalDirection: document.getElementById('goalDirection').value,
     goalAmount: document.getElementById('goalAmount').value,
     adaptation: document.querySelector('input[name="adaptation"]:checked').value,
+    phase: document.querySelector('input[name="phase"]:checked').value,
   }));
 }
 
@@ -771,8 +806,17 @@ function setStatus(text, isError) {
   el.className = isError ? 'status error' : 'status';
 }
 
+function saveDataToStorage() {
+  try {
+    localStorage.setItem('fitnessData', JSON.stringify(rawData));
+  } catch (e) {
+    console.warn('Impossible de sauvegarder les donnees localement:', e);
+  }
+}
+
 function processData() {
   if (!rawData || !rawData.measurements) return;
+  saveDataToStorage();
 
   // Deduplicate: keep one entry per day (the one with most data)
   const byDay = {};
@@ -800,6 +844,7 @@ function processData() {
   updateCharts(entries);
   applyFilters();
   calculateCalories();
+  updateGoalProgress();
 }
 
 function updateKPIs(entries) {
@@ -870,15 +915,104 @@ function updateKPIs(entries) {
     if (prevLBM) setChange('lbmChange', latestLBM.lbm - prevLBM.lbm, 'kg', false);
   }
 
-  // Protein target: 1.6 - 2.0 g/kg for recomposition
+  updateProteinKPI();
+}
+
+function updateGoalProgress() {
+  if (!allEntries.length) return;
+  const card = document.getElementById('goalProgressCard');
+  card.style.display = 'block';
+
+  const latest = allEntries[allEntries.length - 1];
+  const startWeight = Math.max(...allEntries.map(e => e.weight));
+  const currentWeight = latest.weight;
+  const goalWeight = parseFloat(document.getElementById('goalWeightInput').value);
+
+  const totalToLose = startWeight - goalWeight;
+  const alreadyLost = startWeight - currentWeight;
+  const remaining = currentWeight - goalWeight;
+
+  let progress = totalToLose > 0 ? Math.min(100, Math.max(0, (alreadyLost / totalToLose) * 100)) : 0;
+
+  const bar = document.getElementById('goalProgressBar');
+  const isLosing = goalWeight < startWeight;
+
+  if (isLosing) {
+    bar.style.width = progress.toFixed(1) + '%';
+    bar.style.background = progress >= 100
+      ? 'linear-gradient(90deg, #34d399, #059669)'
+      : 'linear-gradient(90deg, #818cf8, #6366f1)';
+    bar.textContent = progress >= 5 ? Math.round(progress) + '%' : '';
+  } else {
+    const totalToGain = goalWeight - startWeight;
+    const alreadyGained = currentWeight - startWeight;
+    progress = totalToGain > 0 ? Math.min(100, Math.max(0, (alreadyGained / totalToGain) * 100)) : 0;
+    bar.style.width = progress.toFixed(1) + '%';
+    bar.style.background = 'linear-gradient(90deg, #fbbf24, #f59e0b)';
+    bar.textContent = progress >= 5 ? Math.round(progress) + '%' : '';
+  }
+
+  document.getElementById('goalStartLabel').textContent = `Depart: ${startWeight} kg`;
+  document.getElementById('goalCurrentLabel').textContent = `Actuel: ${currentWeight} kg`;
+  document.getElementById('goalTargetLabel').textContent = `Cible: ${goalWeight} kg`;
+
+  // ETA based on trend
+  const recentEntries = allEntries.slice(-14);
+  if (recentEntries.length >= 2) {
+    const first = recentEntries[0];
+    const last = recentEntries[recentEntries.length - 1];
+    const days = (new Date(last.date) - new Date(first.date)) / 86400000;
+    const ratePerDay = days > 0 ? (last.weight - first.weight) / days : 0;
+
+    const eta = document.getElementById('goalETA');
+    if (isLosing && ratePerDay < 0 && remaining > 0) {
+      const daysLeft = Math.ceil(remaining / Math.abs(ratePerDay));
+      const etaDate = new Date(Date.now() + daysLeft * 86400000);
+      const formatted = etaDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      const weeksLeft = Math.round(daysLeft / 7);
+      eta.innerHTML = `A ce rythme (<strong>${(ratePerDay * 7).toFixed(0)}g/sem</strong>), objectif atteint vers le <strong>${formatted}</strong> (~${weeksLeft} semaines)`;
+    } else if (!isLosing && ratePerDay > 0) {
+      const toGain = goalWeight - currentWeight;
+      if (toGain > 0) {
+        const daysLeft = Math.ceil(toGain / ratePerDay);
+        const etaDate = new Date(Date.now() + daysLeft * 86400000);
+        const formatted = etaDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+        eta.innerHTML = `A ce rythme (<strong>+${(ratePerDay * 7 * 1000).toFixed(0)}g/sem</strong>), objectif atteint vers le <strong>${formatted}</strong>`;
+      } else {
+        eta.innerHTML = `<span style="color:var(--accent2);">Objectif atteint !</span>`;
+      }
+    } else if (remaining <= 0 && isLosing) {
+      eta.innerHTML = `<span style="color:var(--accent2);">Objectif atteint !</span>`;
+    } else {
+      eta.innerHTML = `Tendance actuelle insuffisante pour estimer une date d'arrivee.`;
+    }
+  }
+
+  localStorage.setItem('fitnessGoalWeight', goalWeight);
+}
+
+function updateProteinKPI() {
+  if (!allEntries.length) return;
+  const latest = allEntries[allEntries.length - 1];
   const w = latest.weight;
-  const proteinLow = Math.round(w * 1.6);
-  const proteinHigh = Math.round(w * 2.0);
-  const proteinIdeal = Math.round(w * 1.8);
-  // 1 egg = ~13g protein (large egg, ~60g)
+  const phase = document.querySelector('input[name="phase"]:checked').value;
+
+  let lowRatio, highRatio, idealRatio, phaseLabel;
+  if (phase === 'cut') {
+    lowRatio = 1.6; highRatio = 2.2; idealRatio = 1.8;
+    phaseLabel = 'seche';
+  } else {
+    lowRatio = 1.4; highRatio = 1.8; idealRatio = 1.6;
+    phaseLabel = 'prise de masse';
+  }
+
+  const proteinLow = Math.round(w * lowRatio);
+  const proteinHigh = Math.round(w * highRatio);
+  const proteinIdeal = Math.round(w * idealRatio);
   const eggsNeeded = Math.ceil(proteinIdeal / 13);
+
   document.getElementById('proteinTarget').innerHTML = `${proteinIdeal}<span class="metric-unit"> g</span>`;
-  document.getElementById('proteinRange').innerHTML = `Fourchette: ${proteinLow} - ${proteinHigh} g (1.6 - 2.0 g/kg)`;
+  document.getElementById('proteinRange').innerHTML = `Fourchette: ${proteinLow} - ${proteinHigh} g (${lowRatio} - ${highRatio} g/kg, ${phaseLabel})`;
   document.getElementById('proteinRange').className = 'metric-change neutral';
   document.getElementById('proteinEggs').innerHTML = `~${eggsNeeded} oeufs/jour en equivalent (~13g prot/oeuf)`;
 }
@@ -1064,6 +1198,52 @@ function updateCharts(entries) {
       ]
     },
     options: chartOptions
+  });
+
+  // LBM vs Fat in kg chart
+  const lbmEntries = entries.filter(e => e.lbm && e.fatKg);
+  const lbmDates = lbmEntries.map(e => e.date);
+  const lbmVals = lbmEntries.map(e => e.lbm);
+  const fatKgVals = lbmEntries.map(e => e.fatKg);
+
+  if (charts.lbmFatKg) charts.lbmFatKg.destroy();
+  charts.lbmFatKg = new Chart(document.getElementById('lbmFatKgChart'), {
+    type: 'line',
+    data: {
+      labels: lbmDates,
+      datasets: [
+        {
+          label: 'Masse maigre (kg)',
+          data: lbmVals,
+          borderColor: '#34d399',
+          backgroundColor: 'rgba(52,211,153,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          yAxisID: 'y',
+        },
+        {
+          label: 'Masse grasse (kg)',
+          data: fatKgVals,
+          borderColor: '#f472b6',
+          backgroundColor: 'rgba(244,114,182,0.1)',
+          fill: true,
+          tension: 0.3,
+          pointRadius: 2,
+          yAxisID: 'y1',
+        },
+        { ...trendDataset('Tendance maigre', lbmDates, lbmVals, '#34d399', 'kg'), yAxisID: 'y' },
+        { ...trendDataset('Tendance grasse', lbmDates, fatKgVals, '#f472b6', 'kg'), yAxisID: 'y1' },
+      ]
+    },
+    options: {
+      ...chartOptions,
+      scales: {
+        ...chartOptions.scales,
+        y: { ...chartOptions.scales.y, position: 'left', title: { display: true, text: 'Maigre (kg)', color: '#34d399' } },
+        y1: { ...chartOptions.scales.y, position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'Grasse (kg)', color: '#f472b6' } },
+      }
+    }
   });
 }
 
@@ -1286,11 +1466,9 @@ function calculateCalories() {
   document.getElementById('neatValue').textContent = `x${neatMult}`;
   document.getElementById('dailyCalories').textContent = safeTarget;
 
-  // Macros: for deficit, higher protein is better (preserve muscle)
-  // 30% protein / 35% carbs / 35% fat (deficit-optimized)
-  // For maintenance/gain: 25% protein / 45% carbs / 30% fat
+  const phase = document.querySelector('input[name="phase"]:checked').value;
   let pRatio, cRatio, fRatio;
-  if (goalDir === 'lose') {
+  if (phase === 'cut') {
     pRatio = 0.30; cRatio = 0.35; fRatio = 0.35;
   } else {
     pRatio = 0.25; cRatio = 0.45; fRatio = 0.30;
@@ -1315,11 +1493,19 @@ function calculateCalories() {
     `;
   }
 
+  updateProteinKPI();
+
   // Daily reminders - dynamic, based on current data
   const expl = document.getElementById('calorieExplainer');
-  const proteinTarget = Math.round(weight * 1.8);
-  const proteinLow = Math.round(weight * 1.6);
-  const proteinHigh = Math.round(weight * 2.0);
+  let protLowR, protHighR, protIdealR;
+  if (phase === 'cut') {
+    protLowR = 1.6; protHighR = 2.2; protIdealR = 1.8;
+  } else {
+    protLowR = 1.4; protHighR = 1.8; protIdealR = 1.6;
+  }
+  const proteinTarget = Math.round(weight * protIdealR);
+  const proteinLow = Math.round(weight * protLowR);
+  const proteinHigh = Math.round(weight * protHighR);
 
   // Build dynamic reminders based on current situation
   const reminders = [];
@@ -1390,11 +1576,26 @@ function calculateCalories() {
 
 // Init
 loadSettings();
+const savedGoalWeight = localStorage.getItem('fitnessGoalWeight');
+if (savedGoalWeight) document.getElementById('goalWeightInput').value = savedGoalWeight;
 
-// Auto-load embedded data on startup
-rawData = EMBEDDED_DATA;
-processData();
-setStatus('Donnees chargees (integrees)', false);
+// Auto-load: prefer localStorage, fallback to embedded data
+const savedData = localStorage.getItem('fitnessData');
+if (savedData) {
+  try {
+    rawData = JSON.parse(savedData);
+    processData();
+    setStatus('Donnees chargees (sauvegarde locale)', false);
+  } catch (e) {
+    rawData = EMBEDDED_DATA;
+    processData();
+    setStatus('Donnees chargees (integrees)', false);
+  }
+} else {
+  rawData = EMBEDDED_DATA;
+  processData();
+  setStatus('Donnees chargees (integrees)', false);
+}
 
 // Drag-and-drop support
 document.addEventListener('dragover', e => e.preventDefault());
