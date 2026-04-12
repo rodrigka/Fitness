@@ -950,38 +950,42 @@ function updateGoalProgress() {
   document.getElementById('goalCurrentLabel').textContent = `Actuel: ${currentWeight} kg`;
   document.getElementById('goalTargetLabel').textContent = `Cible: ${goalWeight} kg`;
 
-  // ETA based on trend
-  const recentEntries = allEntries.slice(-14);
-  if (recentEntries.length >= 2) {
-    const first = recentEntries[0];
-    const last = recentEntries[recentEntries.length - 1];
-    const days = (new Date(last.date) - new Date(first.date)) / 86400000;
-    const ratePerDay = days > 0 ? (last.weight - first.weight) / days : 0;
+  // ETA based on linear regression over the last 14 calendar days
+  const eta = document.getElementById('goalETA');
+  const twoWeeksAgo = new Date(Date.now() - 14 * 86400000);
+  const recentEntries = allEntries.filter(e => new Date(e.date) >= twoWeeksAgo);
 
-    const eta = document.getElementById('goalETA');
+  if (recentEntries.length >= 3) {
+    const dates = recentEntries.map(e => e.date);
+    const weights = recentEntries.map(e => e.weight);
+    const trend = linearTrend(dates, weights);
+    const ratePerDay = trend.slopePerDay;
+    const gPerWeek = Math.round(Math.abs(ratePerDay * 7 * 1000));
+
     if (isLosing && ratePerDay < 0 && remaining > 0) {
       const daysLeft = Math.ceil(remaining / Math.abs(ratePerDay));
       const etaDate = new Date(Date.now() + daysLeft * 86400000);
       const formatted = etaDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
       const weeksLeft = Math.round(daysLeft / 7);
-      const gPerWeek = Math.abs(ratePerDay * 7 * 1000);
-      const rateStr = gPerWeek >= 100 ? Math.round(gPerWeek) + 'g' : gPerWeek.toFixed(0) + 'g';
-      eta.innerHTML = `A ce rythme (<strong>-${rateStr}/sem</strong>), objectif atteint vers le <strong>${formatted}</strong> (~${weeksLeft} semaines)`;
+      eta.innerHTML = `A ce rythme (<strong>-${gPerWeek}g/sem</strong> sur 14j), objectif atteint vers le <strong>${formatted}</strong> (~${weeksLeft} semaines)`;
     } else if (!isLosing && ratePerDay > 0) {
       const toGain = goalWeight - currentWeight;
       if (toGain > 0) {
         const daysLeft = Math.ceil(toGain / ratePerDay);
         const etaDate = new Date(Date.now() + daysLeft * 86400000);
         const formatted = etaDate.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
-        eta.innerHTML = `A ce rythme (<strong>+${(ratePerDay * 7 * 1000).toFixed(0)}g/sem</strong>), objectif atteint vers le <strong>${formatted}</strong>`;
+        const weeksLeft = Math.round(daysLeft / 7);
+        eta.innerHTML = `A ce rythme (<strong>+${gPerWeek}g/sem</strong> sur 14j), objectif atteint vers le <strong>${formatted}</strong> (~${weeksLeft} semaines)`;
       } else {
         eta.innerHTML = `<span style="color:var(--accent2);">Objectif atteint !</span>`;
       }
     } else if (remaining <= 0 && isLosing) {
       eta.innerHTML = `<span style="color:var(--accent2);">Objectif atteint !</span>`;
     } else {
-      eta.innerHTML = `Tendance actuelle insuffisante pour estimer une date d'arrivee.`;
+      eta.innerHTML = `Tendance sur 14j: poids stable. Pas d'estimation possible.`;
     }
+  } else {
+    eta.innerHTML = `Pas assez de donnees sur les 14 derniers jours pour estimer.`;
   }
 
   localStorage.setItem('fitnessGoalWeight', goalWeight);
@@ -990,9 +994,9 @@ function updateGoalProgress() {
 function getProteinRatios() {
   const phase = document.querySelector('input[name="phase"]:checked').value;
   if (phase === 'cut') {
-    return { low: 1.8, high: 2.2, ideal: 2.0, label: 'seche' };
+    return { low: 2.0, high: 2.4, ideal: 2.2, label: 'seche' };
   } else {
-    return { low: 1.4, high: 1.8, ideal: 1.6, label: 'prise de masse' };
+    return { low: 1.6, high: 2.2, ideal: 1.8, label: 'prise de masse' };
   }
 }
 
