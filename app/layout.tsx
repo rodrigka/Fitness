@@ -26,11 +26,11 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/Fitness/icon.jpg" />
         <Script
           src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
         <Script
           src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
         />
       </head>
       <body className="bg-[#0f1117] text-[#e4e4e7] min-h-screen">
