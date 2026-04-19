@@ -1,0 +1,16 @@
+{
+  "name": "Fitness Dashboard",
+  "short_name": "Fitness",
+  "start_url": "/Fitness/",
+  "scope": "/Fitness/",
+  "display": "standalone",
+  "background_color": "#0f1117",
+  "theme_color": "#0f1117",
+  "icons": [
+    {
+      "src": "/Fitness/icon.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

@@ -24,6 +24,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Fitness" />
         <link rel="icon" type="image/jpeg" href="/Fitness/icon.jpg" />
         <link rel="apple-touch-icon" href="/Fitness/icon.jpg" />
+        <link rel="manifest" href="/Fitness/manifest.json" />
         <Script
           src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"
           strategy="afterInteractive"
