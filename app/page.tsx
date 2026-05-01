@@ -87,7 +87,7 @@ export default function Home() {
     };
   }, [handleDataLoaded, setStatus]);
 
-  if (!ready || !settings) {
+  if (!ready) {
     return (
       <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
         <div className="text-center">
@@ -98,6 +98,16 @@ export default function Home() {
     );
   }
   if (locked) return <PinLock onUnlock={() => setLocked(false)} />;
+  if (!settings) {
+    return (
+      <div className="min-h-screen bg-[#0f1117] flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-2">Fitness Dashboard</h1>
+          <p className="text-[#9ca3af] text-sm">Chargement...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-5 max-[430px]:p-2.5 safe-area">
